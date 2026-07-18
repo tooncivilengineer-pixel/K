@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>โปรแกรมคำนวณเงินชดเชยค่า K (ระบบ Cloud)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Sarabun', sans-serif; }
+        /* Hide arrows in number inputs */
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 p-4 md:p-6 font-sans relative">
+    
+    <div id="app" class="max-w-[1400px] mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+        
+        <!-- Header -->
+        <div class="bg-slate-800 text-white p-6 border-b-4 border-blue-500">
+            <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center text-blue-400">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold flex items-center gap-2">
+                            ตารางคำนวณเงินชดเชยค่า K
+                            <span id="currentProjectBadge" class="hidden px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-xs rounded-full border border-emerald-500/30"></span>
+                        </h1>
+                        <p class="text-slate-300 text-sm mt-1">พร้อมระบบผูกสูตร คำนวณดัชนีอัตโนมัติ และบันทึกข้อมูลบน Cloud</p>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons & Global Rule Selector -->
+                <div class="flex flex-wrap items-center gap-3 shrink-0">
+                    <!-- Cloud Actions -->
+                    <div class="flex bg-slate-700/50 p-1.5 rounded-lg border border-slate-600/50">
+                        <button onclick="openLoadModal()" class="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-semibold text-slate-200 hover:bg-slate-600 hover:text-white transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"></path></svg>
+                            เปิดงานเก่า
+                        </button>
+                        <div class="w-px bg-slate-600 mx-1"></div>
+                        <button onclick="openSaveModal()" class="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-semibold text-slate-200 hover:bg-blue-500 hover:text-white transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                            บันทึกงาน
+                        </button>
+                    </div>
+
+                    <!-- Global Rule Selector -->
+                    <div class="bg-slate-700 p-2 rounded-lg flex items-center gap-2 border border-slate-600 shadow-inner">
+                        <span class="text-sm font-medium text-slate-300 mr-1 hidden sm:inline">เกณฑ์:</span>
+                        <button id="rule4Btn" onclick="applyGlobalRule('4')" class="px-3 py-1.5 rounded-md text-sm font-bold bg-slate-600 text-slate-300 hover:bg-slate-500 transition-colors">หัก 4% (เดิม)</button>
+                        <button id="rule2Btn" onclick="applyGlobalRule('2')" class="px-3 py-1.5 rounded-md text-sm font-bold bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm transition-colors">หัก 2% (ใหม่)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 md:p-6 overflow-x-auto relative">
+            <table class="w-full text-left border-collapse min-w-[1300px]">
+                <thead>
+                    <tr class="bg-slate-100 text-slate-700 text-sm uppercase tracking-wider border-b-2 border-slate-200">
+                        <th class="p-3 w-16 text-center font-bold rounded-tl-lg">งวดที่</th>
+                        <th class="p-3 min-w-[280px] font-bold">ชื่อรายการก่อสร้าง</th>
+                        <th class="p-3 w-36 text-center font-bold">วันเปิดซองฯ</th>
+                        <th class="p-3 w-36 text-center font-bold">วันส่งมอบงาน</th>
+                        <th class="p-3 min-w-[220px] font-bold">รหัสสูตร</th>
+                        <th class="p-3 min-w-[150px] text-right font-bold">ค่างาน (Po)</th>
+                        <th class="p-3 min-w-[140px] text-center font-bold">ค่า K</th>
+                        <th class="p-3 w-28 text-center font-bold">เกณฑ์ %</th>
+                        <th class="p-3 w-24 text-center font-bold">ส่วนต่าง</th>
+                        <th class="p-3 min-w-[150px] text-right font-bold">เงินชดเชย (บาท)</th>
+                        <th class="p-3 w-12 rounded-tr-lg"></th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody" class="divide-y divide-slate-100">
+                    <!-- Rows injected via JS -->
+                </tbody>
+            </table>
+            
+            <button onclick="addItem()" class="mt-4 flex items-center text-blue-600 font-semibold text-sm hover:text-blue-800 transition-colors px-4 py-3 hover:bg-blue-50 rounded-lg border border-dashed border-blue-300 bg-blue-50/30 w-full justify-center">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg> 
+                เพิ่มหมวดงานใหม่
+            </button>
+        </div>
+
+        <div class="bg-slate-100 border-t border-slate-200 p-6 flex flex-col lg:flex-row justify-between items-end gap-6">
+            <div class="flex items-start gap-3 bg-amber-50 p-4 rounded-xl border border-amber-200 w-full lg:w-1/2 shadow-sm">
+                <div class="text-amber-500 mt-0.5">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                </div>
+                <div class="text-sm text-amber-800 leading-relaxed">
+                    <strong>หมายเหตุการใช้เกณฑ์:</strong> <br>
+                    การปรับเกณฑ์จาก 4% เป็น 2% ให้ใช้เฉพาะงวดงานที่ส่งมอบระหว่าง <strong>28 ก.พ. - 30 ก.ย. 2569</strong> เท่านั้น (ตามหนังสือ ว190) คุณสามารถเลือกเกณฑ์แยกแต่ละบรรทัดได้หากในงวดนั้นมีงานที่เข้าเกณฑ์ไม่เหมือนกัน
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm w-full lg:w-1/2 min-w-[320px]" id="summaryDiv">
+                <!-- Summary Injected Here -->
+            </div>
+        </div>
+    </div>
+
+    <div id="calcModal" class="hidden fixed inset-0 z-[60] items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick="closeCalcModal()"></div>
+        <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl z-10 overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
+            <div class="bg-slate-800 px-6 py-4 flex justify-between items-center border-b-4 border-blue-500 shrink-0">
+                <div class="flex items-center gap-2 text-white">
+                    <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                    <h2 class="text-lg font-bold">เครื่องคิดเลขดัชนีเป็นค่า K</h2>
+                </div>
+                <button onclick="closeCalcModal()" class="text-slate-400 hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto">
+                <div class="mb-5 flex justify-between items-end border-b border-slate-100 pb-4">
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">กำลังคำนวณสำหรับสูตร</p>
+                        <p id="modalFormulaName" class="text-lg font-bold text-blue-700 mt-1">-</p>
+                    </div>
+                </div>
+
+                <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100 mb-6">
+                    <div class="grid grid-cols-12 gap-2 mb-2 text-xs font-bold text-slate-500 text-center uppercase tracking-wide">
+                        <div class="col-span-4 text-left pl-2">ตัวแปรดัชนี</div>
+                        <div class="col-span-3 text-blue-700">ฐาน (o)</div>
+                        <div class="col-span-3 text-emerald-700">ส่งงาน (t)</div>
+                        <div class="col-span-2">สัดส่วน</div>
+                    </div>
+                    
+                    <div id="modalInputsContainer" class="space-y-2.5">
+                        <!-- Inputs injected via JS -->
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div>
+                        <span class="text-sm font-semibold text-slate-500">ผลลัพธ์ค่า K:</span>
+                        <div id="modalFormulaEquation" class="text-[10px] text-slate-400 mt-1 font-mono">...</div>
+                    </div>
+                    <div class="text-right">
+                        <span id="modalResultK" class="text-4xl font-black text-emerald-600 drop-shadow-sm">0.000</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-100 px-6 py-4 border-t border-slate-200 flex justify-end gap-3 shrink-0">
+                <button onclick="closeCalcModal()" class="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">ยกเลิก</button>
+                <button onclick="saveModalCalc()" class="px-5 py-2.5 rounded-lg text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-md transition-all flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    บันทึกและนำไปใช้
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="saveModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeSaveModal()"></div>
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl z-10 overflow-hidden transform transition-all">
+            <div class="p-6">
+                <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4 mx-auto">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                </div>
+                <h3 class="text-lg font-bold text-center text-slate-800 mb-2">บันทึกข้อมูลตารางลง Cloud</h3>
+                <p class="text-sm text-center text-slate-500 mb-6">ตั้งชื่อเพื่อง่ายต่อการค้นหาและนำกลับมาทำต่อในครั้งหน้า</p>
+                
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5">ชื่อเอกสาร / โครงการ <span class="text-rose-500">*</span></label>
+                    <input type="text" id="saveProjectNameInput" placeholder="เช่น สัญญา 12/2569 งวดที่ 1" class="w-full px-4 py-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow">
+                </div>
+            </div>
+            <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 border-t border-slate-100">
+                <button onclick="closeSaveModal()" class="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">ยกเลิก</button>
+                <button id="confirmSaveBtn" onclick="executeSaveToCloud()" class="px-5 py-2.5 rounded-lg text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-md transition-all flex items-center gap-2">
+                    ยืนยันการบันทึก
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeLoadModal()"></div>
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl z-10 overflow-hidden flex flex-col max-h-[80vh]">
+            <div class="bg-slate-800 px-6 py-4 flex justify-between items-center shrink-0">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"></path></svg>
+                    เปิดงานที่บันทึกไว้
+                </h3>
+                <button onclick="closeLoadModal()" class="text-slate-400 hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            </div>
+            <div class="p-0 overflow-y-auto bg-slate-50 flex-1 relative min-h-[200px]">
+                <div id="loadingProjectsSpinner" class="absolute inset-0 flex flex-col items-center justify-center text-blue-500 bg-slate-50/80 z-10">
+                    <svg class="animate-spin h-8 w-8 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <span class="text-sm font-semibold">กำลังโหลดข้อมูล...</span>
+                </div>
+                <ul id="projectsList" class="divide-y divide-slate-200">
+                    <!-- Project Items injected here -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-[100] flex flex-col gap-3 pointer-events-none"></div>
+
+    <script>
+        // ==========================================
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyDxFfXCG5looRXmriLgGmCSHDpo2_6voBU",
+            authDomain: "toon-civil-gis.firebaseapp.com",
+            projectId: "toon-civil-gis",
+            storageBucket: "toon-civil-gis.firebasestorage.app",
+            messagingSenderId: "795968328879",
+            appId: "1:795968328879:web:b494aec8fdab277453f05a",
+            measurementId: "G-WYZCPFCP8L"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const COLLECTION_NAME = "k_factor_projects"; // ชื่อ Collection ใน Firestore
+        console.log("Firebase Connected: ", firebaseConfig.projectId);
+
+        // ==========================================
+        // ==========================================
+        const VAR_LABELS = {
+            'I': 'ดัชนีผู้บริโภค (I)', 'C': 'ดัชนีซีเมนต์ (C)', 'M': 'ดัชนีวัสดุก่อสร้าง (M)', 'S': 'ดัชนีเหล็ก (S)',
+            'G': 'ดัชนีเหล็กแผ่นเรียบ (G)', 'A': 'ดัชนีแอสฟัลท์ (A)', 'E': 'ดัชนีเครื่องจักรกล (E)', 'F': 'ดัชนีน้ำมันดีเซล (F)',
+            'AC': 'ท่อใยหิน (AC)', 'PVC': 'ท่อ PVC', 'GIP': 'ท่อเหล็กสังกะสี (GIP)', 'PE': 'ท่อ HDPE (PE)', 'W': 'สายไฟฟ้า (W)'
+        };
+
+        const K_FORMULAS = {
+            'K1': { name: 'K1 - งานอาคาร', terms: [{c:0.25}, {c:0.15, v:'I'}, {c:0.10, v:'C'}, {c:0.40, v:'M'}, {c:0.10, v:'S'}] },
+            'K2.1': { name: 'K2.1 - งานดิน (ทั่วไป)', terms: [{c:0.30}, {c:0.10, v:'I'}, {c:0.40, v:'E'}, {c:0.20, v:'F'}] },
+            'K2.2': { name: 'K2.2 - งานหินเรียง', terms: [{c:0.40}, {c:0.20, v:'I'}, {c:0.20, v:'M'}, {c:0.20, v:'F'}] },
+            'K2.3': { name: 'K2.3 - งานเจาะระเบิดหิน', terms: [{c:0.45}, {c:0.15, v:'I'}, {c:0.10, v:'M'}, {c:0.20, v:'E'}, {c:0.10, v:'F'}] },
+            'K3.1': { name: 'K3.1 - ผิวทาง (Prime/Tack Coat)', terms: [{c:0.30}, {c:0.40, v:'A'}, {c:0.20, v:'E'}, {c:0.10, v:'F'}] },
+            'K3.2': { name: 'K3.2 - ผิวทาง (Surface Treatment)', terms: [{c:0.30}, {c:0.10, v:'M'}, {c:0.30, v:'A'}, {c:0.20, v:'E'}, {c:0.10, v:'F'}] },
+            'K3.3': { name: 'K3.3 - ผิวจราจรลาดยาง (AC, PM)', terms: [{c:0.30}, {c:0.10, v:'M'}, {c:0.40, v:'A'}, {c:0.10, v:'E'}, {c:0.10, v:'F'}] },
+            'K3.4': { name: 'K3.4 - ถนนคอนกรีต (คสล.)', terms: [{c:0.30}, {c:0.10, v:'I'}, {c:0.35, v:'C'}, {c:0.10, v:'M'}, {c:0.15, v:'S'}] },
+            'K3.5': { name: 'K3.5 - ท่อระบายน้ำ คสล. และบ่อพัก', terms: [{c:0.35}, {c:0.20, v:'I'}, {c:0.15, v:'C'}, {c:0.15, v:'M'}, {c:0.15, v:'S'}] },
+            'K3.6': { name: 'K3.6 - โครงสร้าง คสล. และเขื่อนกันตลิ่ง', terms: [{c:0.30}, {c:0.10, v:'I'}, {c:0.15, v:'C'}, {c:0.20, v:'M'}, {c:0.25, v:'S'}] },
+            'K3.7': { name: 'K3.7 - โครงสร้างเหล็ก', terms: [{c:0.25}, {c:0.10, v:'I'}, {c:0.05, v:'C'}, {c:0.20, v:'M'}, {c:0.40, v:'S'}] },
+            'K4.1': { name: 'K4.1 - อาคารชลประทานไม่รวมบานเหล็ก', terms: [{c:0.40}, {c:0.20, v:'I'}, {c:0.10, v:'C'}, {c:0.10, v:'M'}, {c:0.20, v:'S'}] },
+            'K4.2': { name: 'K4.2 - อาคารชลประทานรวมบานเหล็ก', terms: [{c:0.35}, {c:0.20, v:'I'}, {c:0.10, v:'C'}, {c:0.10, v:'M'}, {c:0.25, v:'S'}] },
+            'K4.3': { name: 'K4.3 - บานระบาย Trashrack / Steel Liner', terms: [{c:0.35}, {c:0.20, v:'I'}, {c:0.45, v:'G'}] },
+            'K4.4': { name: 'K4.4 - เหล็กเสริมคอนกรีต / Anchor Bar', terms: [{c:0.25}, {c:0.15, v:'I'}, {c:0.60, v:'S'}] },
+            'K4.5': { name: 'K4.5 - คอนกรีตไม่รวมเหล็ก / ดาดคลอง', terms: [{c:0.40}, {c:0.20, v:'I'}, {c:0.20, v:'C'}, {c:0.20, v:'M'}] },
+            'K4.6': { name: 'K4.6 - งานเจาะฝังท่อกรุ', terms: [{c:0.40}, {c:0.20, v:'I'}, {c:0.10, v:'M'}, {c:0.30, v:'F'}] },
+            'K4.7': { name: 'K4.7 - งานอัดฉีดน้ำปูน', terms: [{c:0.30}, {c:0.10, v:'I'}, {c:0.60, v:'C'}] },
+            'K5.1.1': { name: 'K5.1.1 - ท่อ AC/PVC (ผู้ว่าจ้างจัดหา)', terms: [{c:0.40}, {c:0.10, v:'I'}, {c:0.50, v:'M'}] },
+            'K5.1.2': { name: 'K5.1.2 - ท่อ AC (ผู้รับจ้างจัดหา)', terms: [{c:0.40}, {c:0.10, v:'I'}, {c:0.10, v:'M'}, {c:0.40, v:'AC'}] },
+            'K5.1.3': { name: 'K5.1.3 - ท่อ PVC (ผู้รับจ้างจัดหา)', terms: [{c:0.40}, {c:0.10, v:'I'}, {c:0.10, v:'M'}, {c:0.40, v:'PVC'}] },
+            'K5.2.1': { name: 'K5.2.1 - ท่อเหล็ก/HDPE (ผู้ว่าจ้างจัดหา)', terms: [{c:0.40}, {c:0.10, v:'I'}, {c:0.10, v:'M'}, {c:0.10, v:'E'}, {c:0.30, v:'F'}] },
+            'K5.2.2': { name: 'K5.2.2 - ท่อเหล็กเหนียว (ผู้รับจ้างจัดหา)', terms: [{c:0.40}, {c:0.10, v:'I'}, {c:0.10, v:'M'}, {c:0.10, v:'E'}, {c:0.30, v:'GIP'}] },
+            'K5.2.3': { name: 'K5.2.3 - ท่อ HDPE (ผู้รับจ้างจัดหา)', terms: [{c:0.40}, {c:0.10, v:'I'}, {c:0.10, v:'M'}, {c:0.30, v:'PE'}] },
+            'K5.3': { name: 'K5.3 - อุโมงค์ส่งน้ำ / Secondary Lining', terms: [{c:0.40}, {c:0.10, v:'I'}, {c:0.15, v:'E'}, {c:0.35, v:'F'}] },
+            'K5.4': { name: 'K5.4 - ท่อ PVC หุ้มคอนกรีต', terms: [{c:0.30}, {c:0.10, v:'I'}, {c:0.20, v:'C'}, {c:0.05, v:'M'}, {c:0.05, v:'S'}, {c:0.30, v:'PVC'}] },
+            'K5.5': { name: 'K5.5 - ท่อ PVC กลบทราย', terms: [{c:0.35}, {c:0.05, v:'I'}, {c:0.05, v:'M'}, {c:0.55, v:'PVC'}] },
+            'K5.6': { name: 'K5.6 - ท่อเหล็กอาบสังกะสี', terms: [{c:0.30}, {c:0.10, v:'I'}, {c:0.60, v:'GIP'}] },
+            'K5.7.1': { name: 'K5.7.1 - ติดตั้งเสาโครงเหล็ก (กฟผ.)', terms: [{c:0.80}, {c:0.10, v:'I'}, {c:0.10, v:'F'}] },
+            'K5.7.2': { name: 'K5.7.2 - ฐานรากเสาไฟฟ้า (กฟผ.)', terms: [{c:0.35}, {c:0.20, v:'I'}, {c:0.20, v:'C'}, {c:0.20, v:'S'}, {c:0.05, v:'F'}] },
+            'K5.7.3': { name: 'K5.7.3 - ฐานรากสถานีย่อย (กฟผ.)', terms: [{c:0.50}, {c:0.20, v:'I'}, {c:0.15, v:'C'}, {c:0.15, v:'S'}] },
+            'K5.8.1': { name: 'K5.8.1 - เสาเข็มคอนกรีตอัดแรง (กฟผ.)', terms: [{c:0.35}, {c:0.15, v:'I'}, {c:0.20, v:'C'}, {c:0.30, v:'S'}] },
+            'K5.8.2': { name: 'K5.8.2 - เสาเข็ม Cast in Place (กฟผ.)', terms: [{c:0.30}, {c:0.10, v:'I'}, {c:0.25, v:'C'}, {c:0.35, v:'S'}] },
+            'K5.9.1': { name: 'K5.9.1 - สายส่งแรงสูง ผู้ว่าจ้างจัดหา (กฟภ.)', terms: [{c:0.80}, {c:0.10, v:'I'}, {c:0.10, v:'F'}] },
+            'K5.9.2': { name: 'K5.9.2 - สายส่งแรงสูง ผู้รับจ้างจัดหา (กฟภ.)', terms: [{c:0.45}, {c:0.05, v:'I'}, {c:0.20, v:'M'}, {c:0.05, v:'F'}, {c:0.25, v:'W'}] }
+        };
+
+        // ==========================================
+        // ==========================================
+        let items = [
+            { id: 1, period: '1', name: 'งานรื้อและบดอัดดินเดิม', formula: 'K2.1', baseDate: '', deliveryDate: '', po: '', kValue: '', rule: '2', indices: { base: {}, curr: {} } },
+            { id: 2, period: '1', name: 'งานชั้นพื้นทาง (หินคลุก)', formula: 'K3.1', baseDate: '', deliveryDate: '', po: '', kValue: '', rule: '2', indices: { base: {}, curr: {} } },
+            { id: 3, period: '1', name: 'งานผิวจราจร AC', formula: 'K3.3', baseDate: '', deliveryDate: '', po: '', kValue: '', rule: '2', indices: { base: {}, curr: {} } }
+        ];
+
+        let currentGlobalRule = '2';
+        let activeModalItemId = null;
+        let currentLoadedProjectId = null; // เก็บ ID หากเปิดไฟล์เก่า
+
+        // Custom Toast System (Replaces alert())
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            let colorClasses = type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
+                             : type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-700' 
+                             : 'bg-amber-50 border-amber-200 text-amber-700';
+                             
+            let icon = type === 'success' ? `<svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`
+                     : type === 'error' ? `<svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>`
+                     : `<svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+
+            toast.className = `flex items-center gap-2 p-4 rounded-xl border shadow-lg transform transition-all duration-300 translate-y-10 opacity-0 pointer-events-auto ${colorClasses}`;
+            toast.innerHTML = `${icon} <span class="font-semibold text-sm">${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            }, 10);
+
+            // Animate out and remove
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function formatNum(num) { 
+            return new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num || 0); 
+        }
+
+        // ==========================================
+        // ==========================================
+        function getFormulaOptionsHTML(selectedValue) {
+            let html = '';
+            const groups = {
+                'งานอาคาร': ['K1'],
+                'งานดิน': ['K2.1', 'K2.2', 'K2.3'],
+                'งานทาง': ['K3.1', 'K3.2', 'K3.3', 'K3.4', 'K3.5', 'K3.6', 'K3.7'],
+                'งานชลประทาน': ['K4.1', 'K4.2', 'K4.3', 'K4.4', 'K4.5', 'K4.6', 'K4.7'],
+                'งานระบบสาธารณูปโภค': ['K5.1.1', 'K5.1.2', 'K5.1.3', 'K5.2.1', 'K5.2.2', 'K5.2.3', 'K5.3', 'K5.4', 'K5.5', 'K5.6'],
+                'งานเฉพาะ (กฟผ. / กฟภ.)': ['K5.7.1', 'K5.7.2', 'K5.7.3', 'K5.8.1', 'K5.8.2', 'K5.9.1', 'K5.9.2']
+            };
+
+            for (const [groupName, formulaKeys] of Object.entries(groups)) {
+                html += `<optgroup label="${groupName}">`;
+                formulaKeys.forEach(key => {
+                    const formula = K_FORMULAS[key];
+                    if (formula) {
+                        html += `<option value="${key}" ${selectedValue === key ? 'selected' : ''}>${formula.name}</option>`;
+                    }
+                });
+                html += `</optgroup>`;
+            }
+            return html;
+        }
+
+        function calculateRow(poStr, kStr, rule) {
+            const po = parseFloat(poStr.toString().replace(/,/g, '')) || 0;
+            const k = parseFloat(kStr) || 0;
+            if (po <= 0 || k <= 0) return { amount: 0, type: 'NONE', multiplier: 0 };
+            
+            const upper = rule === '4' ? 1.040 : 1.020;
+            const lower = rule === '4' ? 0.960 : 0.980;
+            
+            if (k > upper) return { amount: po * (k - upper), type: 'INCREASE', multiplier: k - upper };
+            if (k < lower) return { amount: po * (lower - k), type: 'DECREASE', multiplier: lower - k };
+            return { amount: 0, type: 'NONE', multiplier: 0 };
+        }
+
+        function render() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            let poTot = 0, incTot = 0, decTot = 0;
+
+            document.getElementById('rule4Btn').className = `px-3 py-1.5 rounded-md text-sm font-bold transition-colors ${currentGlobalRule === '4' ? 'bg-blue-500 text-white shadow-sm ring-2 ring-blue-300' : 'bg-slate-600 text-slate-300 hover:bg-slate-500'}`;
+            document.getElementById('rule2Btn').className = `px-3 py-1.5 rounded-md text-sm font-bold transition-colors ${currentGlobalRule === '2' ? 'bg-emerald-500 text-white shadow-sm ring-2 ring-emerald-300' : 'bg-slate-600 text-slate-300 hover:bg-slate-500'}`;
+
+            // Update Project Badge
+            const badge = document.getElementById('currentProjectBadge');
+            if (currentLoadedProjectId) {
+                badge.textContent = `ไฟล์: ${currentLoadedProjectId}`;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+
+            items.forEach(item => {
+                const res = calculateRow(item.po, item.kValue, item.rule);
+                const poVal = parseFloat(item.po.toString().replace(/,/g, '')) || 0;
+                poTot += poVal;
+                
+                if (res.type === 'INCREASE') incTot += res.amount;
+                if (res.type === 'DECREASE') decTot += res.amount;
+
+                const inputClass = "w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 font-medium text-slate-700 bg-white shadow-sm transition-all";
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-blue-50/40 transition-colors";
+                tr.innerHTML = `
+                    <td class="p-2 align-top">
+                        <input type="text" value="${item.period}" onchange="updateItem(${item.id}, 'period', this.value)" placeholder="1" class="${inputClass} text-center font-bold">
+                    </td>
+                    <td class="p-2 align-top">
+                        <input type="text" value="${item.name}" onchange="updateItem(${item.id}, 'name', this.value)" placeholder="กรอกชื่อรายการก่อสร้าง" class="${inputClass} min-w-[200px]">
+                    </td>
+                    <td class="p-2 align-top">
+                        <input type="date" value="${item.baseDate}" onchange="updateItem(${item.id}, 'baseDate', this.value)" class="${inputClass} text-sm px-1 text-center">
+                    </td>
+                    <td class="p-2 align-top">
+                        <input type="date" value="${item.deliveryDate}" onchange="updateItem(${item.id}, 'deliveryDate', this.value)" class="${inputClass} text-sm px-1 text-center">
+                    </td>
+                    <td class="p-2 align-top">
+                        <select onchange="updateItem(${item.id}, 'formula', this.value)" class="${inputClass} text-sm min-w-[200px]">
+                            ${getFormulaOptionsHTML(item.formula)}
+                        </select>
+                    </td>
+                    <td class="p-2 align-top">
+                        <input type="number" value="${item.po}" onchange="updateItem(${item.id}, 'po', this.value)" placeholder="0.00" class="${inputClass} text-right">
+                    </td>
+                    <td class="p-2 align-top">
+                        <div class="flex items-stretch gap-1">
+                            <input type="number" step="0.001" value="${item.kValue}" onchange="updateItem(${item.id}, 'kValue', this.value)" placeholder="1.000" class="${inputClass} text-center text-blue-700 font-bold !pr-1">
+                            <button onclick="openCalcModal(${item.id})" class="flex items-center justify-center bg-blue-100 hover:bg-blue-600 text-blue-600 hover:text-white transition-colors rounded-lg border border-blue-200 px-2.5 shadow-sm" title="คำนวณค่า K จากดัชนี">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16v16H4V4zm4 4h8v2H8V8zm0 6h2v2H8v-2zm4 0h2v2h-2v-2zm-4 4h2v2H8v-2zm4 0h2v2h-2v-2z"></path></svg>
+                            </button>
+                        </div>
+                    </td>
+                    <td class="p-2 align-top text-center">
+                        <select onchange="updateItem(${item.id}, 'rule', this.value)" class="w-full p-2.5 border rounded-lg outline-none font-bold cursor-pointer text-sm shadow-sm transition-colors ${item.rule === '2' ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-blue-50 text-blue-700 border-blue-300'}">
+                            <option value="4" ${item.rule=='4'?'selected':''}>หัก 4%</option>
+                            <option value="2" ${item.rule=='2'?'selected':''}>หัก 2%</option>
+                        </select>
+                    </td>
+                    <td class="p-2 align-top text-center">
+                        <div class="mt-2.5 flex justify-center">
+                            <span class="px-2 py-1 rounded font-mono text-xs ${res.type === 'NONE' ? 'text-slate-400 bg-slate-100' : 'text-slate-700 bg-slate-200 border border-slate-300 shadow-sm'}">
+                                ${res.multiplier.toFixed(3)}
+                            </span>
+                        </div>
+                    </td>
+                    <td class="p-2 align-top text-right bg-white/50 rounded-lg">
+                        <div class="mt-1 font-bold text-lg ${res.type === 'INCREASE' ? 'text-emerald-600' : res.type === 'DECREASE' ? 'text-rose-600' : 'text-slate-400'}">
+                            ${res.type === 'DECREASE' ? '-' : ''}${formatNum(res.amount)}
+                        </div>
+                        <div class="text-[9px] text-slate-400 mt-0.5 uppercase tracking-wider font-semibold">${res.type}</div>
+                    </td>
+                    <td class="p-2 align-top text-center">
+                        <button onclick="removeItem(${item.id})" class="mt-1.5 text-slate-300 hover:text-rose-500 transition-colors p-2 rounded-full hover:bg-rose-50" title="ลบรายการ">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            const netTotal = incTot - decTot;
+            document.getElementById('summaryDiv').innerHTML = `
+                <h3 class="text-slate-500 font-bold text-sm mb-4 uppercase tracking-wider border-b border-slate-200 pb-2">สรุปยอดสุทธิ (งวดนี้)</h3>
+                <div class="space-y-3 mb-5">
+                    <div class="flex justify-between text-sm items-center">
+                        <span class="text-slate-600">รวมค่างาน (Po):</span>
+                        <span class="font-bold text-slate-800 text-lg">${formatNum(poTot)}</span>
+                    </div>
+                    <div class="flex justify-between text-sm items-center">
+                        <span class="text-slate-600">รวมยอดขอเงินเพิ่ม (+):</span>
+                        <span class="font-bold text-emerald-600 text-lg">${formatNum(incTot)}</span>
+                    </div>
+                    <div class="flex justify-between text-sm items-center">
+                        <span class="text-slate-600">รวมยอดเรียกเงินคืน (-):</span>
+                        <span class="font-bold text-rose-600 text-lg">${formatNum(decTot)}</span>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center border-t border-slate-200 pt-4 bg-slate-50/50 -mx-6 px-6 -mb-6 pb-6 rounded-b-xl">
+                    <span class="text-base font-bold text-slate-800">เงินชดเชยสุทธิ:</span>
+                    <span class="text-3xl font-black ${netTotal > 0 ? 'text-emerald-600' : netTotal < 0 ? 'text-rose-600' : 'text-slate-500'}">
+                        ${netTotal < 0 ? '-' : ''}${formatNum(Math.abs(netTotal))}
+                    </span>
+                </div>
+            `;
+        }
+
+        // ==========================================
+        // ==========================================
+        function updateItem(id, field, val) { 
+            items = items.map(i => i.id == id ? {...i, [field]: val} : i); 
+            render(); 
+        }
+        
+        function addItem() { 
+            items.push({ 
+                id: Date.now(), period: '', name: '', formula: 'K1', 
+                baseDate: '', deliveryDate: '', po: '', kValue: '', 
+                rule: currentGlobalRule, indices: { base: {}, curr: {} } 
+            }); 
+            render(); 
+            showToast('เพิ่มแถวรายการใหม่แล้ว', 'success');
+        }
+        
+        function removeItem(id) { 
+            if(items.length > 1) {
+                items = items.filter(i => i.id != id); 
+                render();
+            } else {
+                showToast("ตารางต้องมีอย่างน้อย 1 รายการครับ", "error");
+            }
+        }
+        
+        function applyGlobalRule(rule) { 
+            currentGlobalRule = rule;
+            items.forEach(i => i.rule = rule); 
+            render(); 
+            showToast(`เปลี่ยนเกณฑ์หักเป็น ${rule}% ทุกรายการแล้ว`, 'success');
+        }
+
+        // ==========================================
+        // ==========================================
+        function openCalcModal(id) {
+            activeModalItemId = id;
+            const item = items.find(i => i.id === id);
+            const formulaDef = K_FORMULAS[item.formula];
+            
+            if (!formulaDef) {
+                showToast("เกิดข้อผิดพลาด ไม่พบข้อมูลสมการนี้", "error");
+                return;
+            }
+
+            document.getElementById('modalFormulaName').textContent = formulaDef.name;
+            const container = document.getElementById('modalInputsContainer');
+            container.innerHTML = '';
+            
+            formulaDef.terms.forEach(term => {
+                if (term.v) {
+                    const varName = term.v;
+                    const varLabel = VAR_LABELS[varName] || varName;
+                    const bVal = item.indices.base[varName] || '';
+                    const cVal = item.indices.curr[varName] || '';
+
+                    const row = document.createElement('div');
+                    row.className = 'grid grid-cols-12 gap-2 items-center bg-white p-2 rounded border border-slate-200 hover:border-blue-300 transition-colors shadow-sm';
+                    row.innerHTML = `
+                        <div class="col-span-4 text-xs font-semibold text-slate-700 flex items-center gap-1 leading-tight">
+                            <span class="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0"></span>
+                            ${varLabel}
+                        </div>
+                        <div class="col-span-3">
+                            <input type="number" step="0.1" id="modal_b_${varName}" value="${bVal}" placeholder="${varName}o" class="w-full text-center border border-slate-300 rounded p-1.5 text-sm font-medium outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" oninput="calculateLiveK()">
+                        </div>
+                        <div class="col-span-3">
+                            <input type="number" step="0.1" id="modal_c_${varName}" value="${cVal}" placeholder="${varName}t" class="w-full text-center border border-emerald-300 rounded p-1.5 text-sm font-medium outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-emerald-50/30" oninput="calculateLiveK()">
+                        </div>
+                        <div class="col-span-2 text-center text-xs font-mono font-bold text-slate-500" id="modal_ratio_${varName}">
+                            -
+                        </div>
+                    `;
+                    container.appendChild(row);
+                }
+            });
+
+            document.getElementById('calcModal').classList.remove('hidden');
+            document.getElementById('calcModal').classList.add('flex');
+            calculateLiveK();
+        }
+
+        function closeCalcModal() {
+            document.getElementById('calcModal').classList.add('hidden');
+            document.getElementById('calcModal').classList.remove('flex');
+            activeModalItemId = null;
+        }
+
+        function calculateLiveK() {
+            if (!activeModalItemId) return;
+            const item = items.find(i => i.id === activeModalItemId);
+            const formulaDef = K_FORMULAS[item.formula];
+            
+            let totalK = 0;
+            let equationParts = [];
+            let allValid = true;
+
+            formulaDef.terms.forEach(term => {
+                if (term.v === null || term.v === undefined) {
+                    totalK += term.c;
+                    equationParts.push(`${term.c.toFixed(2)}`);
+                } else {
+                    const varName = term.v;
+                    const elB = document.getElementById(`modal_b_${varName}`);
+                    const elC = document.getElementById(`modal_c_${varName}`);
+                    
+                    if (elB && elC) {
+                        const bVal = parseFloat(elB.value);
+                        const cVal = parseFloat(elC.value);
+                        const ratioEl = document.getElementById(`modal_ratio_${varName}`);
+
+                        if (bVal > 0 && cVal >= 0) {
+                            const ratioStr = (cVal / bVal).toFixed(3);
+                            const ratioNum = parseFloat(ratioStr);
+                            
+                            ratioEl.textContent = ratioStr;
+                            ratioEl.className = "col-span-2 text-center text-xs font-mono font-bold text-blue-600 bg-blue-50 py-1 rounded";
+
+                            const termValue = term.c * ratioNum;
+                            totalK += termValue;
+                            equationParts.push(`${term.c.toFixed(2)}(${ratioStr})`);
+                        } else {
+                            allValid = false;
+                            ratioEl.textContent = "-";
+                            ratioEl.className = "col-span-2 text-center text-xs font-mono font-bold text-slate-400";
+                            equationParts.push(`${term.c.toFixed(2)}(${varName}t/${varName}o)`);
+                        }
+                    }
+                }
+            });
+
+            const resultEl = document.getElementById('modalResultK');
+            if (allValid) {
+                const finalK = totalK.toFixed(3);
+                resultEl.textContent = finalK;
+                resultEl.className = "text-4xl font-black text-emerald-600 drop-shadow-sm";
+                document.getElementById('modalFormulaEquation').innerHTML = `K = ${equationParts.join(' + ')} = <span class="font-bold text-emerald-600">${finalK}</span>`;
+            } else {
+                resultEl.textContent = "0.000";
+                resultEl.className = "text-4xl font-black text-slate-300";
+                document.getElementById('modalFormulaEquation').innerHTML = `K = ${equationParts.join(' + ')}`;
+            }
+        }
+
+        function saveModalCalc() {
+            if (!activeModalItemId) return;
+            const item = items.find(i => i.id === activeModalItemId);
+            const formulaDef = K_FORMULAS[item.formula];
+            
+            let newBase = {};
+            let newCurr = {};
+            let isComplete = true;
+
+            formulaDef.terms.forEach(term => {
+                if (term.v) {
+                    const elB = document.getElementById(`modal_b_${term.v}`);
+                    const elC = document.getElementById(`modal_c_${term.v}`);
+                    if (elB && elC) {
+                        const bVal = parseFloat(elB.value);
+                        const cVal = parseFloat(elC.value);
+                        if (isNaN(bVal) || isNaN(cVal) || bVal <= 0) isComplete = false;
+                        newBase[term.v] = isNaN(bVal) ? '' : bVal;
+                        newCurr[term.v] = isNaN(cVal) ? '' : cVal;
+                    }
+                }
+            });
+
+            item.indices.base = newBase;
+            item.indices.curr = newCurr;
+
+            const finalK = document.getElementById('modalResultK').textContent;
+            if (finalK !== "0.000" && isComplete) {
+                item.kValue = finalK;
+                showToast("บันทึกค่า K เรียบร้อยแล้ว", "success");
+            } else {
+                showToast("บันทึกข้อมูลบางส่วน (กรุณากรอกดัชนีให้ครบเพื่อคำนวณ)", "warning");
+            }
+
+            items = [...items];
+            render();
+            closeCalcModal();
+        }
+
+        // ==========================================
+        // ==========================================
+        function openSaveModal() {
+            const input = document.getElementById('saveProjectNameInput');
+            // If already working on a project, prepopulate name
+            if(currentLoadedProjectId) {
+                input.value = currentLoadedProjectId;
+            } else {
+                input.value = '';
+            }
+            document.getElementById('saveModal').classList.remove('hidden');
+            document.getElementById('saveModal').classList.add('flex');
+            input.focus();
+        }
+
+        function closeSaveModal() {
+            document.getElementById('saveModal').classList.add('hidden');
+            document.getElementById('saveModal').classList.remove('flex');
+        }
+
+        async function executeSaveToCloud() {
+            const projectName = document.getElementById('saveProjectNameInput').value.trim();
+            if (!projectName) {
+                showToast("กรุณาตั้งชื่อโครงการก่อนบันทึก", "error");
+                return;
+            }
+
+            const btn = document.getElementById('confirmSaveBtn');
+            const origText = btn.innerHTML;
+            btn.innerHTML = `<svg class="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> กำลังบันทึก...`;
+            btn.disabled = true;
+
+            const payload = {
+                projectName: projectName,
+                items: items,
+                globalRule: currentGlobalRule,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            try {
+                // Use projectName as the document ID for simplicity in overriding
+                await db.collection(COLLECTION_NAME).doc(projectName).set(payload);
+                showToast("บันทึกข้อมูลลง Cloud สำเร็จ!", "success");
+                currentLoadedProjectId = projectName;
+                render(); // Update badge
+                closeSaveModal();
+            } catch (error) {
+                console.error("Error saving: ", error);
+                showToast("เกิดข้อผิดพลาดในการบันทึก กรุณาลองใหม่", "error");
+            } finally {
+                btn.innerHTML = origText;
+                btn.disabled = false;
+            }
+        }
+
+        async function openLoadModal() {
+            document.getElementById('loadModal').classList.remove('hidden');
+            document.getElementById('loadModal').classList.add('flex');
+            document.getElementById('loadingProjectsSpinner').classList.remove('hidden');
+            const listEl = document.getElementById('projectsList');
+            listEl.innerHTML = '';
+
+            try {
+                const snapshot = await db.collection(COLLECTION_NAME).orderBy("updatedAt", "desc").get();
+                document.getElementById('loadingProjectsSpinner').classList.add('hidden');
+                
+                if (snapshot.empty) {
+                    listEl.innerHTML = `<li class="p-8 text-center text-slate-500">ยังไม่มีข้อมูลที่บันทึกไว้</li>`;
+                    return;
+                }
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const docId = doc.id;
+                    const dateStr = data.updatedAt ? data.updatedAt.toDate().toLocaleString('th-TH') : 'ไม่ทราบวันที่';
+                    const numItems = data.items ? data.items.length : 0;
+
+                    const li = document.createElement('li');
+                    li.className = "hover:bg-blue-50 transition-colors p-4 flex justify-between items-center cursor-pointer border-b border-slate-100";
+                    li.onclick = () => loadSpecificProject(docId);
+                    
+                    li.innerHTML = `
+                        <div class="flex items-start gap-3 pointer-events-none">
+                            <div class="bg-blue-100 p-2 rounded-lg text-blue-600 mt-1">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-800">${data.projectName}</h4>
+                                <p class="text-xs text-slate-500 mt-0.5">บันทึกล่าสุด: ${dateStr} • ${numItems} รายการ</p>
+                            </div>
+                        </div>
+                        <button class="text-blue-600 hover:bg-blue-200 p-2 rounded-full transition-colors" title="โหลดข้อมูล">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        </button>
+                    `;
+                    listEl.appendChild(li);
+                });
+            } catch (error) {
+                console.error("Error loading: ", error);
+                document.getElementById('loadingProjectsSpinner').classList.add('hidden');
+                listEl.innerHTML = `<li class="p-8 text-center text-rose-500">เกิดข้อผิดพลาดในการโหลดข้อมูล</li>`;
+            }
+        }
+
+        function closeLoadModal() {
+            document.getElementById('loadModal').classList.add('hidden');
+            document.getElementById('loadModal').classList.remove('flex');
+        }
+
+        async function loadSpecificProject(docId) {
+            try {
+                const doc = await db.collection(COLLECTION_NAME).doc(docId).get();
+                if (doc.exists) {
+                    const data = doc.data();
+                    items = data.items || [];
+                    currentGlobalRule = data.globalRule || '2';
+                    currentLoadedProjectId = docId;
+                    
+                    render();
+                    closeLoadModal();
+                    showToast(`โหลดงาน "${docId}" เรียบร้อยแล้ว`, 'success');
+                } else {
+                    showToast("ไม่พบเอกสารนี้ในฐานข้อมูล", "error");
+                }
+            } catch (error) {
+                console.error("Error fetching doc: ", error);
+                showToast("โหลดข้อมูลล้มเหลว", "error");
+            }
+        }
+
+        // Initialize First Render
+        render();
+    </script>
+</body>
+</html>
