@@ -8,6 +8,10 @@
     
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+    
+    <!-- เพิ่ม Library สำหรับวาดกราฟ (Chart.js) และ อ่านไฟล์ Excel (SheetJS) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
@@ -22,6 +26,13 @@
         ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        @media print {
+            body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            #app, #calcModal, #saveModal, #loadModal, #indexModal, #allIndicesModal, #toastContainer, .no-print { display: none !important; }
+            #printArea { display: block !important; }
+            @page { margin: 15mm; }
+        }
     </style>
 </head>
 <body class="bg-slate-50 p-4 md:p-6 font-sans relative">
@@ -46,6 +57,13 @@
                 
                 <!-- Action Buttons & Global Rule Selector -->
                 <div class="flex flex-wrap items-center gap-3 shrink-0">
+                    
+                    <!-- ปุ่มค่าดัชนีรายเดือน -->
+                    <button onclick="openIndexModal()" class="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-semibold bg-indigo-500 text-white hover:bg-indigo-600 shadow-sm transition-colors border border-indigo-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        จัดการดัชนี
+                    </button>
+
                     <!-- Cloud Actions -->
                     <div class="flex bg-slate-700/50 p-1.5 rounded-lg border border-slate-600/50">
                         <button onclick="openLoadModal()" class="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-semibold text-slate-200 hover:bg-slate-600 hover:text-white transition-colors">
@@ -75,8 +93,8 @@
                     <tr class="bg-slate-100 text-slate-700 text-sm uppercase tracking-wider border-b-2 border-slate-200">
                         <th class="p-3 w-16 text-center font-bold rounded-tl-lg">งวดที่</th>
                         <th class="p-3 min-w-[280px] font-bold">ชื่อรายการก่อสร้าง</th>
-                        <th class="p-3 w-36 text-center font-bold">วันเปิดซองฯ</th>
-                        <th class="p-3 w-36 text-center font-bold">วันส่งมอบงาน</th>
+                        <th id="baseDateHeader" class="p-3 w-40 text-center font-bold leading-tight transition-all duration-300 rounded-t-lg bg-emerald-100 text-emerald-800 shadow-inner">วันอนุมัติราคากลาง<br><span class="text-[10px] text-emerald-700 font-bold tracking-normal">(เดือนฐาน o)</span></th>
+                        <th class="p-3 w-36 text-center font-bold leading-tight">วันส่งมอบงาน<br><span class="text-[10px] text-slate-500 font-medium tracking-normal">(t)</span></th>
                         <th class="p-3 min-w-[220px] font-bold">รหัสสูตร</th>
                         <th class="p-3 min-w-[150px] text-right font-bold">ค่างาน (Po)</th>
                         <th class="p-3 min-w-[140px] text-center font-bold">ค่า K</th>
@@ -103,8 +121,12 @@
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                 </div>
                 <div class="text-sm text-amber-800 leading-relaxed">
-                    <strong>หมายเหตุการใช้เกณฑ์:</strong> <br>
-                    การปรับเกณฑ์จาก 4% เป็น 2% ให้ใช้เฉพาะงวดงานที่ส่งมอบระหว่าง <strong>28 ก.พ. - 30 ก.ย. 2569</strong> เท่านั้น (ตามหนังสือ ว190) คุณสามารถเลือกเกณฑ์แยกแต่ละบรรทัดได้หากในงวดนั้นมีงานที่เข้าเกณฑ์ไม่เหมือนกัน
+                    <strong>ข้อควรระวังการใช้เกณฑ์ (ว190):</strong> <br>
+                    <ul class="list-disc pl-4 mt-1 space-y-1">
+                        <li><strong>เกณฑ์ 2%:</strong> ใช้สำหรับงวดงานที่ส่งมอบ 28 ก.พ. - 30 ก.ย. 69 (เดือนฐาน o ให้ใช้วันที่ <span class="text-emerald-700 font-bold">"อนุมัติราคากลาง"</span>)</li>
+                        <li><strong>เกณฑ์ 4%:</strong> เป็นเกณฑ์ปกติ (เดือนฐาน o ให้ใช้วันที่ <span class="text-blue-700 font-bold">"เปิดซองประกวดราคา"</span> ตามเดิม)</li>
+                        <li class="text-rose-600 font-medium">กรณีส่งงานล่าช้ากว่าสัญญา ให้ใช้ดัชนีเดือนที่ส่งงานจริง เปรียบเทียบกับ เดือนที่ครบกำหนดสัญญา และเลือกใช้ค่า K ที่น้อยกว่าเสมอ</li>
+                    </ul>
                 </div>
             </div>
             
@@ -114,6 +136,7 @@
         </div>
     </div>
 
+    <!-- Modal คำนวณค่า K แบบ Semi-Auto -->
     <div id="calcModal" class="hidden fixed inset-0 z-[60] items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick="closeCalcModal()"></div>
         <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl z-10 overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
@@ -169,6 +192,7 @@
         </div>
     </div>
 
+    <!-- บันทึกและโหลดงาน -->
     <div id="saveModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeSaveModal()"></div>
         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl z-10 overflow-hidden transform transition-all">
@@ -215,12 +239,186 @@
         </div>
     </div>
 
+    <!-- Modal ดัชนีหลัก -->
+    <div id="indexModal" class="hidden fixed inset-0 z-[80] items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeIndexModal()"></div>
+        <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl z-10 overflow-hidden flex flex-col max-h-[90vh] border border-slate-200">
+            <!-- Header -->
+            <div class="bg-slate-50 px-6 py-4 flex justify-between items-center border-b border-slate-200 shrink-0">
+                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+                    จัดการฐานข้อมูลดัชนีกระทรวงพาณิชย์
+                </h2>
+                <button onclick="closeIndexModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <div class="p-6 overflow-y-auto bg-white flex-1">
+                <!-- Smart Paste Section -->
+                <div class="bg-emerald-50/50 border border-emerald-200 rounded-xl p-4 mb-6">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2 text-emerald-800 font-bold text-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            ระบบวางตัวเลขด่วน (VLOOKUP อัจฉริยะ)
+                        </div>
+                        <a href="https://index.tpso.go.th/escalation-factors/report-monthly" target="_blank" class="text-xs flex items-center gap-1 bg-emerald-600 text-white px-2.5 py-1 rounded-md hover:bg-emerald-700 transition-colors shadow-sm">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                            เว็บดัชนีพาณิชย์ (สนค.)
+                        </a>
+                    </div>
+                    <textarea id="smartPasteArea" oninput="processSmartPaste(this.value)" rows="2" placeholder="Ctrl+V วางข้อมูลดัชนีจาก PDF ที่นี่ (คัดลอกให้ติดชื่อดัชนีมาด้วย)..." class="w-full p-3 rounded-lg border border-emerald-200 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm resize-none text-slate-600 shadow-inner"></textarea>
+                </div>
+
+                <!-- Month Selector & Actions -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-5 border-b border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <label class="text-sm font-bold text-slate-700">เดือน:</label>
+                        <input type="month" id="indexMonthSelector" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
+                        <span id="indexStatus" class="text-xs font-semibold text-rose-500">ไม่มีข้อมูลเดือนนี้</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="openAllIndicesModal()" class="px-3 py-1.5 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors flex items-center gap-1.5 border border-indigo-200">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg> ตารางดัชนีทั้งหมด
+                        </button>
+                        <label class="px-3 py-1.5 rounded-md text-xs font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer mb-0">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg> นำเข้า Excel
+                            <input type="file" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelImport(event)">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Input Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                    
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <label class="block text-xs font-bold text-indigo-700 mb-1.5">วัสดุ (M)</label>
+                        <input type="number" id="idx_M" placeholder="0.00" class="w-full px-3 py-2 border border-slate-300 rounded-md outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm">
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">แอสฟัลท์ (A)</label>
+                        <input type="number" id="idx_A" placeholder="0.00" class="w-full px-3 py-2 border border-slate-300 rounded-md outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm">
+                    </div>
+
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">เหล็ก (S)</label>
+                        <input type="number" id="idx_S" placeholder="0.00" class="w-full px-3 py-2 border border-slate-300 rounded-md outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm">
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <label class="block text-xs font-bold text-amber-700 mb-1.5">เครื่องจักร (E)</label>
+                        <input type="number" id="idx_E" placeholder="0.00" class="w-full px-3 py-2 border border-slate-300 rounded-md outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm">
+                    </div>
+
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">ซีเมนต์ (C)</label>
+                        <input type="number" id="idx_C" placeholder="0.00" class="w-full px-3 py-2 border border-slate-300 rounded-md outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm">
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">ท่อสังกะสี (GIP)</label>
+                        <input type="number" id="idx_GIP" placeholder="0.00" class="w-full px-3 py-2 border border-slate-300 rounded-md outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm">
+                    </div>
+
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">เหล็กแผ่น (G)</label>
+                        <input type="number" id="idx_G" placeholder="0.00" class="w-full px-3 py-2 border border-slate-300 rounded-md outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm">
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <label class="block text-xs font-bold text-emerald-700 mb-1.5">ท่อใยหิน (AC)</label>
+                        <input type="number" id="idx_AC" placeholder="0.00" class="w-full px-3 py-2 border border-slate-300 rounded-md outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm">
+                    </div>
+
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <label class="block text-xs font-bold text-blue-700 mb-1.5">ผู้บริโภค (I)</label>
+                        <input type="number" id="idx_I" placeholder="0.00" class="w-full px-3 py-2 border border-slate-300 rounded-md outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm">
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <label class="block text-xs font-bold text-sky-700 mb-1.5">ท่อ PVC</label>
+                        <input type="number" id="idx_PVC" placeholder="0.00" class="w-full px-3 py-2 border border-slate-300 rounded-md outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm">
+                    </div>
+
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <label class="block text-xs font-bold text-rose-700 mb-1.5">น้ำมัน (F)</label>
+                        <input type="number" id="idx_F" placeholder="0.00" class="w-full px-3 py-2 border border-slate-300 rounded-md outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm">
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <label class="block text-xs font-bold text-amber-500 mb-1.5">สายไฟฟ้า (W)</label>
+                        <input type="number" id="idx_W" placeholder="0.00" class="w-full px-3 py-2 border border-slate-300 rounded-md outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm">
+                    </div>
+                    
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <label class="block text-xs font-bold text-teal-700 mb-1.5">ท่อ HDPE (PE)</label>
+                        <input type="number" id="idx_PE" placeholder="0.00" class="w-full px-3 py-2 border border-slate-300 rounded-md outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm">
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3 shrink-0">
+                <button onclick="closeIndexModal()" class="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">ปิด</button>
+                <button id="saveIndexBtn" onclick="saveIndexToCloud()" class="px-5 py-2.5 rounded-lg text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-md transition-all flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                    บันทึกขึ้น Cloud
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- แทรกหน้าต่าง: ภาพรวมฐานข้อมูลดัชนี (ตาราง + กราฟ) -->
+    <div id="allIndicesModal" class="hidden fixed inset-0 z-[90] items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeAllIndicesModal()"></div>
+        <div class="bg-white w-full max-w-7xl rounded-2xl shadow-2xl z-10 flex flex-col h-[90vh] border border-slate-200">
+            <div class="bg-slate-50 px-6 py-4 flex justify-between items-center border-b border-slate-200 shrink-0">
+                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                    ภาพรวมฐานข้อมูลดัชนีพาณิชย์
+                </h2>
+                <button onclick="closeAllIndicesModal()" class="text-slate-400 hover:text-slate-600 transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            </div>
+            <div class="p-6 overflow-y-auto bg-slate-50 flex-1 custom-scrollbar">
+                
+                <!-- Chart Section -->
+                <div class="bg-white p-4 rounded-xl border border-slate-200 mb-6 shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-sm font-bold text-indigo-700 flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg> กราฟวิเคราะห์แนวโน้มดัชนี</h3>
+                    </div>
+                    <div class="w-full h-64">
+                        <canvas id="indicesChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Table Section -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-center text-sm">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+                                    <th class="p-3 text-left">เดือน-ปี</th>
+                                    <th class="p-3">M</th><th class="p-3">A</th><th class="p-3">S</th><th class="p-3">E</th><th class="p-3">C</th>
+                                    <th class="p-3">GIP</th><th class="p-3">G</th><th class="p-3">AC</th><th class="p-3">I</th><th class="p-3">PVC</th>
+                                    <th class="p-3">F</th><th class="p-3">W</th><th class="p-3">PE</th>
+                                    <th class="p-3">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="allIndicesTableBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <!-- Footer -->
+            <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3 shrink-0">
+                <button onclick="closeAllIndicesModal()" class="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors bg-white border border-slate-300">ปิดหน้าต่าง</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notification Container -->
     <div id="toastContainer" class="fixed bottom-5 right-5 z-[100] flex flex-col gap-3 pointer-events-none"></div>
 
+    <!-- พื้นที่สำหรับสร้างรายงานพิมพ์ (ซ่อนไว้ปกติ จะแสดงเฉพาะตอนสั่ง Print) -->
+    <div id="printArea" class="hidden p-4 w-full bg-white text-slate-900 font-sans mx-auto max-w-4xl"></div>
+
     <script>
-        // ==========================================
-        // ==========================================
         const firebaseConfig = {
             apiKey: "AIzaSyDxFfXCG5looRXmriLgGmCSHDpo2_6voBU",
             authDomain: "toon-civil-gis.firebaseapp.com",
@@ -233,11 +431,8 @@
         
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        const COLLECTION_NAME = "k_factor_projects"; // ชื่อ Collection ใน Firestore
-        console.log("Firebase Connected: ", firebaseConfig.projectId);
+        const COLLECTION_NAME = "k_factor_projects"; 
 
-        // ==========================================
-        // ==========================================
         const VAR_LABELS = {
             'I': 'ดัชนีผู้บริโภค (I)', 'C': 'ดัชนีซีเมนต์ (C)', 'M': 'ดัชนีวัสดุก่อสร้าง (M)', 'S': 'ดัชนีเหล็ก (S)',
             'G': 'ดัชนีเหล็กแผ่นเรียบ (G)', 'A': 'ดัชนีแอสฟัลท์ (A)', 'E': 'ดัชนีเครื่องจักรกล (E)', 'F': 'ดัชนีน้ำมันดีเซล (F)',
@@ -282,8 +477,6 @@
             'K5.9.2': { name: 'K5.9.2 - สายส่งแรงสูง ผู้รับจ้างจัดหา (กฟภ.)', terms: [{c:0.45}, {c:0.05, v:'I'}, {c:0.20, v:'M'}, {c:0.05, v:'F'}, {c:0.25, v:'W'}] }
         };
 
-        // ==========================================
-        // ==========================================
         let items = [
             { id: 1, period: '1', name: 'งานรื้อและบดอัดดินเดิม', formula: 'K2.1', baseDate: '', deliveryDate: '', po: '', kValue: '', rule: '2', indices: { base: {}, curr: {} } },
             { id: 2, period: '1', name: 'งานชั้นพื้นทาง (หินคลุก)', formula: 'K3.1', baseDate: '', deliveryDate: '', po: '', kValue: '', rule: '2', indices: { base: {}, curr: {} } },
@@ -292,32 +485,26 @@
 
         let currentGlobalRule = '2';
         let activeModalItemId = null;
-        let currentLoadedProjectId = null; // เก็บ ID หากเปิดไฟล์เก่า
+        let currentLoadedProjectId = null; 
 
-        // Custom Toast System (Replaces alert())
         function showToast(message, type = 'success') {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
             
             let colorClasses = type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
                              : type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-700' 
-                             : 'bg-amber-50 border-amber-200 text-amber-700';
+                             : 'bg-indigo-50 border-indigo-200 text-indigo-700';
                              
             let icon = type === 'success' ? `<svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`
                      : type === 'error' ? `<svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>`
-                     : `<svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+                     : `<svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
 
             toast.className = `flex items-center gap-2 p-4 rounded-xl border shadow-lg transform transition-all duration-300 translate-y-10 opacity-0 pointer-events-auto ${colorClasses}`;
             toast.innerHTML = `${icon} <span class="font-semibold text-sm">${message}</span>`;
             
             container.appendChild(toast);
             
-            // Animate in
-            setTimeout(() => {
-                toast.classList.remove('translate-y-10', 'opacity-0');
-            }, 10);
-
-            // Animate out and remove
+            setTimeout(() => toast.classList.remove('translate-y-10', 'opacity-0'), 10);
             setTimeout(() => {
                 toast.classList.add('translate-y-10', 'opacity-0');
                 setTimeout(() => toast.remove(), 300);
@@ -328,8 +515,6 @@
             return new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num || 0); 
         }
 
-        // ==========================================
-        // ==========================================
         function getFormulaOptionsHTML(selectedValue) {
             let html = '';
             const groups = {
@@ -345,9 +530,7 @@
                 html += `<optgroup label="${groupName}">`;
                 formulaKeys.forEach(key => {
                     const formula = K_FORMULAS[key];
-                    if (formula) {
-                        html += `<option value="${key}" ${selectedValue === key ? 'selected' : ''}>${formula.name}</option>`;
-                    }
+                    if (formula) html += `<option value="${key}" ${selectedValue === key ? 'selected' : ''}>${formula.name}</option>`;
                 });
                 html += `</optgroup>`;
             }
@@ -355,7 +538,8 @@
         }
 
         function calculateRow(poStr, kStr, rule) {
-            const po = parseFloat(poStr.toString().replace(/,/g, '')) || 0;
+            const safePoStr = (poStr !== undefined && poStr !== null) ? poStr.toString() : '0';
+            const po = parseFloat(safePoStr.replace(/,/g, '')) || 0;
             const k = parseFloat(kStr) || 0;
             if (po <= 0 || k <= 0) return { amount: 0, type: 'NONE', multiplier: 0 };
             
@@ -375,7 +559,15 @@
             document.getElementById('rule4Btn').className = `px-3 py-1.5 rounded-md text-sm font-bold transition-colors ${currentGlobalRule === '4' ? 'bg-blue-500 text-white shadow-sm ring-2 ring-blue-300' : 'bg-slate-600 text-slate-300 hover:bg-slate-500'}`;
             document.getElementById('rule2Btn').className = `px-3 py-1.5 rounded-md text-sm font-bold transition-colors ${currentGlobalRule === '2' ? 'bg-emerald-500 text-white shadow-sm ring-2 ring-emerald-300' : 'bg-slate-600 text-slate-300 hover:bg-slate-500'}`;
 
-            // Update Project Badge
+            const baseDateHeader = document.getElementById('baseDateHeader');
+            if (currentGlobalRule === '2') {
+                baseDateHeader.innerHTML = 'วันอนุมัติราคากลาง<br><span class="text-[10px] text-emerald-700 font-bold tracking-normal">(เดือนฐาน o)</span>';
+                baseDateHeader.className = "p-3 w-40 text-center font-bold leading-tight transition-all duration-300 rounded-t-lg bg-emerald-100 text-emerald-800 shadow-inner";
+            } else {
+                baseDateHeader.innerHTML = 'วันเปิดซองประกวดราคา<br><span class="text-[10px] text-blue-700 font-bold tracking-normal">(เดือนฐาน o)</span>';
+                baseDateHeader.className = "p-3 w-40 text-center font-bold leading-tight transition-all duration-300 rounded-t-lg bg-blue-100 text-blue-800 shadow-inner";
+            }
+
             const badge = document.getElementById('currentProjectBadge');
             if (currentLoadedProjectId) {
                 badge.textContent = `ไฟล์: ${currentLoadedProjectId}`;
@@ -385,8 +577,9 @@
             }
 
             items.forEach(item => {
-                const res = calculateRow(item.po, item.kValue, item.rule);
-                const poVal = parseFloat(item.po.toString().replace(/,/g, '')) || 0;
+                const safePo = item.po !== undefined && item.po !== null ? item.po.toString() : '0';
+                const res = calculateRow(safePo, item.kValue, item.rule);
+                const poVal = parseFloat(safePo.replace(/,/g, '')) || 0;
                 poTot += poVal;
                 
                 if (res.type === 'INCREASE') incTot += res.amount;
@@ -404,10 +597,10 @@
                         <input type="text" value="${item.name}" onchange="updateItem(${item.id}, 'name', this.value)" placeholder="กรอกชื่อรายการก่อสร้าง" class="${inputClass} min-w-[200px]">
                     </td>
                     <td class="p-2 align-top">
-                        <input type="date" value="${item.baseDate}" onchange="updateItem(${item.id}, 'baseDate', this.value)" class="${inputClass} text-sm px-1 text-center">
+                        <input type="date" value="${item.baseDate}" onchange="updateItem(${item.id}, 'baseDate', this.value)" title="${item.rule === '4' ? 'ใส่วันเปิดซองประกวดราคา (ดัชนีเดือนฐาน)' : 'ใส่วันอนุมัติราคากลาง (ดัชนีเดือนฐาน)'}" class="${inputClass} text-sm px-1 text-center cursor-help">
                     </td>
                     <td class="p-2 align-top">
-                        <input type="date" value="${item.deliveryDate}" onchange="updateItem(${item.id}, 'deliveryDate', this.value)" class="${inputClass} text-sm px-1 text-center">
+                        <input type="date" value="${item.deliveryDate}" onchange="updateItem(${item.id}, 'deliveryDate', this.value)" title="ใส่วันส่งมอบงาน หรือ วันที่ครบกำหนดสัญญา (เลือกวันที่น้อยกว่า)" class="${inputClass} text-sm px-1 text-center cursor-help">
                     </td>
                     <td class="p-2 align-top">
                         <select onchange="updateItem(${item.id}, 'formula', this.value)" class="${inputClass} text-sm min-w-[200px]">
@@ -454,8 +647,15 @@
             });
 
             const netTotal = incTot - decTot;
+            
             document.getElementById('summaryDiv').innerHTML = `
-                <h3 class="text-slate-500 font-bold text-sm mb-4 uppercase tracking-wider border-b border-slate-200 pb-2">สรุปยอดสุทธิ (งวดนี้)</h3>
+                <div class="flex justify-between items-center border-b border-slate-200 pb-2 mb-4">
+                    <h3 class="text-slate-500 font-bold text-sm uppercase tracking-wider">สรุปยอดสุทธิ (งวดนี้)</h3>
+                    <button onclick="generatePrintReport()" class="text-xs flex items-center gap-1.5 bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-md hover:bg-slate-200 transition-colors border border-slate-300 shadow-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                        พิมพ์รายงานคำนวณ
+                    </button>
+                </div>
                 <div class="space-y-3 mb-5">
                     <div class="flex justify-between text-sm items-center">
                         <span class="text-slate-600">รวมค่างาน (Po):</span>
@@ -479,17 +679,24 @@
             `;
         }
 
-        // ==========================================
-        // ==========================================
         function updateItem(id, field, val) { 
+            const isFirstItem = items.length > 0 && items[0].id === id;
             items = items.map(i => i.id == id ? {...i, [field]: val} : i); 
+            
+            if (isFirstItem && field === 'baseDate') {
+                items = items.map(i => i.id === id ? i : {...i, baseDate: val});
+                if(val) showToast('อัปเดตวันที่ให้รายการที่เหลืออัตโนมัติ', 'info');
+            }
             render(); 
         }
         
         function addItem() { 
+            const lastItem = items.length > 0 ? items[items.length - 1] : null;
+            const newBaseDate = lastItem ? lastItem.baseDate : '';
+            
             items.push({ 
                 id: Date.now(), period: '', name: '', formula: 'K1', 
-                baseDate: '', deliveryDate: '', po: '', kValue: '', 
+                baseDate: newBaseDate, deliveryDate: '', po: '', kValue: '', 
                 rule: currentGlobalRule, indices: { base: {}, curr: {} } 
             }); 
             render(); 
@@ -512,9 +719,7 @@
             showToast(`เปลี่ยนเกณฑ์หักเป็น ${rule}% ทุกรายการแล้ว`, 'success');
         }
 
-        // ==========================================
-        // ==========================================
-        function openCalcModal(id) {
+        async function openCalcModal(id) {
             activeModalItemId = id;
             const item = items.find(i => i.id === id);
             const formulaDef = K_FORMULAS[item.formula];
@@ -524,16 +729,52 @@
                 return;
             }
 
+            if(!item.baseDate || !item.deliveryDate) {
+                showToast("คำแนะนำ: กรุณาใส่วันที่เปิดซองฯ และวันส่งมอบงานก่อน เพื่อให้ระบบดึงดัชนีให้อัตโนมัติ", "info");
+            } else {
+                showToast("กำลังจับคู่ดัชนีจากฐานข้อมูล Cloud...", "info");
+            }
+
             document.getElementById('modalFormulaName').textContent = formulaDef.name;
             const container = document.getElementById('modalInputsContainer');
-            container.innerHTML = '';
+            container.innerHTML = '<div class="text-center p-6 text-slate-500 font-bold animate-pulse">กำลังดึงข้อมูลดัชนี...</div>';
+            
+            document.getElementById('calcModal').classList.remove('hidden');
+            document.getElementById('calcModal').classList.add('flex');
+
+            let baseIndices = { ...item.indices.base };
+            let currIndices = { ...item.indices.curr };
+
+            try {
+                if (item.baseDate) {
+                    const baseMonth = item.baseDate.substring(0, 7); 
+                    const doc = await db.collection('k_factor_master_indices').doc(baseMonth).get();
+                    if (doc.exists) {
+                        const data = doc.data().indices;
+                        Object.keys(data).forEach(k => { if(data[k]) baseIndices[k] = data[k]; });
+                    }
+                }
+                if (item.deliveryDate) {
+                    const currMonth = item.deliveryDate.substring(0, 7);
+                    const doc = await db.collection('k_factor_master_indices').doc(currMonth).get();
+                    if (doc.exists) {
+                        const data = doc.data().indices;
+                        Object.keys(data).forEach(k => { if(data[k]) currIndices[k] = data[k]; });
+                    }
+                }
+            } catch(e) {
+                console.error("Error fetching indices", e);
+                showToast("ดึงข้อมูลดัชนีไม่สำเร็จ (แต่ยังสามารถกรอกเองได้)", "warning");
+            }
+
+            container.innerHTML = ''; 
             
             formulaDef.terms.forEach(term => {
                 if (term.v) {
                     const varName = term.v;
                     const varLabel = VAR_LABELS[varName] || varName;
-                    const bVal = item.indices.base[varName] || '';
-                    const cVal = item.indices.curr[varName] || '';
+                    const bVal = baseIndices[varName] || '';
+                    const cVal = currIndices[varName] || '';
 
                     const row = document.createElement('div');
                     row.className = 'grid grid-cols-12 gap-2 items-center bg-white p-2 rounded border border-slate-200 hover:border-blue-300 transition-colors shadow-sm';
@@ -556,8 +797,6 @@
                 }
             });
 
-            document.getElementById('calcModal').classList.remove('hidden');
-            document.getElementById('calcModal').classList.add('flex');
             calculateLiveK();
         }
 
@@ -662,16 +901,10 @@
             closeCalcModal();
         }
 
-        // ==========================================
-        // ==========================================
         function openSaveModal() {
             const input = document.getElementById('saveProjectNameInput');
-            // If already working on a project, prepopulate name
-            if(currentLoadedProjectId) {
-                input.value = currentLoadedProjectId;
-            } else {
-                input.value = '';
-            }
+            if(currentLoadedProjectId) input.value = currentLoadedProjectId;
+            else input.value = '';
             document.getElementById('saveModal').classList.remove('hidden');
             document.getElementById('saveModal').classList.add('flex');
             input.focus();
@@ -684,14 +917,11 @@
 
         async function executeSaveToCloud() {
             const projectName = document.getElementById('saveProjectNameInput').value.trim();
-            if (!projectName) {
-                showToast("กรุณาตั้งชื่อโครงการก่อนบันทึก", "error");
-                return;
-            }
+            if (!projectName) return showToast("กรุณาตั้งชื่อโครงการก่อนบันทึก", "error");
 
             const btn = document.getElementById('confirmSaveBtn');
             const origText = btn.innerHTML;
-            btn.innerHTML = `<svg class="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> กำลังบันทึก...`;
+            btn.innerHTML = 'กำลังบันทึก...';
             btn.disabled = true;
 
             const payload = {
@@ -702,11 +932,10 @@
             };
 
             try {
-                // Use projectName as the document ID for simplicity in overriding
                 await db.collection(COLLECTION_NAME).doc(projectName).set(payload);
                 showToast("บันทึกข้อมูลลง Cloud สำเร็จ!", "success");
                 currentLoadedProjectId = projectName;
-                render(); // Update badge
+                render(); 
                 closeSaveModal();
             } catch (error) {
                 console.error("Error saving: ", error);
@@ -735,13 +964,11 @@
 
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    const docId = doc.id;
                     const dateStr = data.updatedAt ? data.updatedAt.toDate().toLocaleString('th-TH') : 'ไม่ทราบวันที่';
-                    const numItems = data.items ? data.items.length : 0;
-
+                    
                     const li = document.createElement('li');
                     li.className = "hover:bg-blue-50 transition-colors p-4 flex justify-between items-center cursor-pointer border-b border-slate-100";
-                    li.onclick = () => loadSpecificProject(docId);
+                    li.onclick = () => loadSpecificProject(doc.id);
                     
                     li.innerHTML = `
                         <div class="flex items-start gap-3 pointer-events-none">
@@ -750,12 +977,9 @@
                             </div>
                             <div>
                                 <h4 class="font-bold text-slate-800">${data.projectName}</h4>
-                                <p class="text-xs text-slate-500 mt-0.5">บันทึกล่าสุด: ${dateStr} • ${numItems} รายการ</p>
+                                <p class="text-xs text-slate-500 mt-0.5">บันทึกล่าสุด: ${dateStr}</p>
                             </div>
                         </div>
-                        <button class="text-blue-600 hover:bg-blue-200 p-2 rounded-full transition-colors" title="โหลดข้อมูล">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                        </button>
                     `;
                     listEl.appendChild(li);
                 });
@@ -779,17 +1003,415 @@
                     items = data.items || [];
                     currentGlobalRule = data.globalRule || '2';
                     currentLoadedProjectId = docId;
-                    
                     render();
                     closeLoadModal();
                     showToast(`โหลดงาน "${docId}" เรียบร้อยแล้ว`, 'success');
-                } else {
-                    showToast("ไม่พบเอกสารนี้ในฐานข้อมูล", "error");
                 }
             } catch (error) {
-                console.error("Error fetching doc: ", error);
+                console.error(error);
                 showToast("โหลดข้อมูลล้มเหลว", "error");
             }
+        }
+
+        function openIndexModal() {
+            document.getElementById('indexModal').classList.remove('hidden');
+            document.getElementById('indexModal').classList.add('flex');
+        }
+
+        function closeIndexModal() {
+            document.getElementById('indexModal').classList.add('hidden');
+            document.getElementById('indexModal').classList.remove('flex');
+        }
+
+        function processSmartPaste(text) {
+            if (!text || text.trim() === '') return;
+            
+            const keywords = {
+                'M': ['วัสดุก่อสร้าง', 'วัสดุ', 'M =', 'M='],
+                'A': ['แอสฟัลท์', 'ยางมะตอย', 'A =', 'A='],
+                'S': ['ดัชนีเหล็ก', 'เหล็ก', 'S =', 'S='],
+                'E': ['เครื่องจักรกล', 'เครื่องจักร', 'E =', 'E='],
+                'C': ['ซีเมนต์', 'C =', 'C='],
+                'GIP': ['ท่อสังกะสี', 'ท่อเหล็กอาบสังกะสี', 'GIP'],
+                'G': ['เหล็กแผ่นเรียบ', 'เหล็กแผ่น', 'G =', 'G='],
+                'AC': ['ท่อใยหิน', 'AC =', 'AC='],
+                'I': ['ผู้บริโภค', 'I =', 'I='],
+                'PVC': ['ท่อ PVC', 'PVC =', 'PVC='],
+                'F': ['น้ำมันดีเซล', 'น้ำมัน', 'ดีเซล', 'F =', 'F='],
+                'W': ['สายไฟฟ้า', 'สายไฟ', 'W =', 'W='],
+                'PE': ['HDPE', 'POLYETHYLENE', 'PE =', 'PE=']
+            };
+
+            let matchCount = 0;
+
+            for (const [key, words] of Object.entries(keywords)) {
+                for (const word of words) {
+                    const regex = new RegExp(word + '[^0-9]*([0-9]+\\.[0-9]+|[0-9]+)', 'i');
+                    const match = text.match(regex);
+                    
+                    if (match && match[1]) {
+                        const el = document.getElementById(`idx_${key}`);
+                        if (el && el.value !== match[1]) {
+                            el.value = match[1];
+                            el.classList.add('bg-emerald-100', 'ring-2', 'ring-emerald-500', 'transition-all');
+                            setTimeout(() => el.classList.remove('bg-emerald-100', 'ring-2', 'ring-emerald-500'), 1500);
+                            matchCount++;
+                        }
+                        break; 
+                    }
+                }
+            }
+
+            if(matchCount > 0) {
+                showToast(`ดึงตัวเลขสำเร็จ ${matchCount} รายการ`, 'success');
+                setTimeout(() => { document.getElementById('smartPasteArea').value = ''; }, 1500);
+            }
+        }
+
+        async function saveIndexToCloud() {
+            const monthVal = document.getElementById('indexMonthSelector').value;
+            if (!monthVal) return showToast("กรุณาเลือกเดือนที่ช่องด้านบนก่อนกดบันทึกครับ", "error");
+
+            const btn = document.getElementById('saveIndexBtn');
+            const origText = btn.innerHTML;
+            btn.innerHTML = `กำลังบันทึก...`;
+            btn.disabled = true;
+
+            const indices = {
+                M: document.getElementById('idx_M').value, A: document.getElementById('idx_A').value,
+                S: document.getElementById('idx_S').value, E: document.getElementById('idx_E').value,
+                C: document.getElementById('idx_C').value, GIP: document.getElementById('idx_GIP').value,
+                G: document.getElementById('idx_G').value, AC: document.getElementById('idx_AC').value,
+                I: document.getElementById('idx_I').value, PVC: document.getElementById('idx_PVC').value,
+                F: document.getElementById('idx_F').value, W: document.getElementById('idx_W').value,
+                PE: document.getElementById('idx_PE').value
+            };
+
+            try {
+                await db.collection('k_factor_master_indices').doc(monthVal).set({
+                    month: monthVal,
+                    indices: indices,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                showToast("บันทึกฐานข้อมูลดัชนีสำเร็จ!", "success");
+                
+                const keys = ['M','A','S','E','C','GIP','G','AC','I','PVC','F','W','PE'];
+                keys.forEach(k => {
+                    const el = document.getElementById(`idx_${k}`);
+                    if(el) el.value = '';
+                });
+                document.getElementById('smartPasteArea').value = '';
+                document.getElementById('indexMonthSelector').value = '';
+                document.getElementById('indexStatus').innerText = 'ไม่มีข้อมูลเดือนนี้';
+                document.getElementById('indexStatus').className = 'text-xs font-semibold text-rose-500';
+
+            } catch (error) {
+                console.error("Error saving index: ", error);
+                showToast("เกิดข้อผิดพลาดในการบันทึก", "error");
+            } finally {
+                btn.innerHTML = origText;
+                btn.disabled = false;
+            }
+        }
+
+        let indicesChartInstance = null;
+
+        function formatMonthYear(yyyy_mm) {
+            if(!yyyy_mm) return '';
+            const [year, month] = yyyy_mm.split('-');
+            const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+            return `${thaiMonths[parseInt(month)-1]} ${parseInt(year) + 543}`;
+        }
+
+        async function openAllIndicesModal() {
+            document.getElementById('allIndicesModal').classList.remove('hidden');
+            document.getElementById('allIndicesModal').classList.add('flex');
+            
+            const tbody = document.getElementById('allIndicesTableBody');
+            tbody.innerHTML = '<tr><td colspan="15" class="p-8 text-center text-slate-500">กำลังโหลดข้อมูลจาก Cloud...</td></tr>';
+            
+            try {
+                const snapshot = await db.collection('k_factor_master_indices').orderBy('month', 'desc').get();
+                if (snapshot.empty) {
+                    tbody.innerHTML = '<tr><td colspan="15" class="p-8 text-center text-slate-500">ยังไม่มีข้อมูลในระบบ</td></tr>';
+                    if (indicesChartInstance) indicesChartInstance.destroy();
+                    return;
+                }
+
+                let rowsHtml = '';
+                const chartLabels = [];
+                const chartDataF = [];
+                const chartDataS = [];
+                const chartDataA = [];
+                
+                const allData = [];
+                snapshot.forEach(doc => allData.push({ id: doc.id, ...doc.data() }));
+
+                allData.forEach(data => {
+                    const idx = data.indices || {};
+                    const monthLabel = formatMonthYear(data.month);
+                    
+                    rowsHtml += `
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="p-3 text-left font-bold text-slate-700 leading-tight">
+                                ${monthLabel} <br><span class="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200 font-semibold uppercase">Cloud</span>
+                            </td>
+                            <td class="p-3">${idx.M || '<span class="text-rose-300">-</span>'}</td>
+                            <td class="p-3">${idx.A || '<span class="text-rose-300">-</span>'}</td>
+                            <td class="p-3">${idx.S || '<span class="text-rose-300">-</span>'}</td>
+                            <td class="p-3">${idx.E || '<span class="text-rose-300">-</span>'}</td>
+                            <td class="p-3">${idx.C || '<span class="text-rose-300">-</span>'}</td>
+                            <td class="p-3">${idx.GIP || '<span class="text-rose-300">-</span>'}</td>
+                            <td class="p-3">${idx.G || '<span class="text-rose-300">-</span>'}</td>
+                            <td class="p-3">${idx.AC || '<span class="text-rose-300">-</span>'}</td>
+                            <td class="p-3">${idx.I || '<span class="text-rose-300">-</span>'}</td>
+                            <td class="p-3">${idx.PVC || '<span class="text-rose-300">-</span>'}</td>
+                            <td class="p-3 font-bold text-rose-600">${idx.F || '<span class="text-rose-300">-</span>'}</td>
+                            <td class="p-3">${idx.W || '<span class="text-rose-300">-</span>'}</td>
+                            <td class="p-3">${idx.PE || '<span class="text-rose-300">-</span>'}</td>
+                            <td class="p-3">
+                                <button onclick="deleteIndexData('${data.id}')" class="text-rose-400 hover:text-rose-600 hover:bg-rose-50 p-2 rounded-md transition-colors shadow-sm border border-transparent hover:border-rose-200 bg-white" title="ลบข้อมูลเดือนนี้">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                tbody.innerHTML = rowsHtml;
+
+                const reversedData = [...allData].reverse();
+                reversedData.forEach(data => {
+                    chartLabels.push(formatMonthYear(data.month));
+                    chartDataF.push(parseFloat(data.indices?.F) || null);
+                    chartDataS.push(parseFloat(data.indices?.S) || null);
+                    chartDataA.push(parseFloat(data.indices?.A) || null);
+                });
+                
+                const ctx = document.getElementById('indicesChart').getContext('2d');
+                if (indicesChartInstance) indicesChartInstance.destroy();
+                
+                indicesChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [
+                            { label: 'น้ำมัน (F)', data: chartDataF, borderColor: '#e11d48', backgroundColor: '#e11d48', tension: 0.1, pointRadius: 4 },
+                            { label: 'เหล็ก (S)', data: chartDataS, borderColor: '#475569', backgroundColor: '#475569', tension: 0.1, pointRadius: 4 },
+                            { label: 'แอสฟัลท์ (A)', data: chartDataA, borderColor: '#4338ca', backgroundColor: '#4338ca', tension: 0.1, pointRadius: 4 }
+                        ]
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: { legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } } }
+                    }
+                });
+
+            } catch (error) {
+                console.error("Error loading indices: ", error);
+                tbody.innerHTML = '<tr><td colspan="15" class="p-8 text-center text-rose-500">โหลดข้อมูลล้มเหลว กรุณาลองใหม่</td></tr>';
+            }
+        }
+
+        function closeAllIndicesModal() {
+            document.getElementById('allIndicesModal').classList.add('hidden');
+            document.getElementById('allIndicesModal').classList.remove('flex');
+        }
+
+        async function deleteIndexData(docId) {
+            if(confirm(`คุณต้องการลบข้อมูลดัชนีของเดือน ${formatMonthYear(docId)} ใช่หรือไม่?\n(เมื่อลบแล้วจะไม่สามารถกู้คืนได้)`)) {
+                try {
+                    await db.collection('k_factor_master_indices').doc(docId).delete();
+                    showToast('ลบข้อมูลสำเร็จ', 'success');
+                    openAllIndicesModal(); 
+                } catch(error) {
+                    console.error(error);
+                    showToast('ลบข้อมูลล้มเหลว', 'error');
+                }
+            }
+        }
+
+        function handleExcelImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showToast("กำลังอ่านไฟล์ Excel...", 'info');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const csvText = XLSX.utils.sheet_to_csv(firstSheet);
+                    
+                    document.getElementById('smartPasteArea').value = "ดึงข้อมูลจากไฟล์ Excel แล้ว กำลังประมวลผล...";
+                    
+                    if(typeof processSmartPaste === 'function') {
+                        processSmartPaste(csvText);
+                    } else {
+                        showToast('ไม่พบระบบ VLOOKUP อัจฉริยะ', 'error');
+                    }
+                } catch (error) {
+                    console.error("Excel Parse Error:", error);
+                    showToast('เกิดข้อผิดพลาด ไม่สามารถอ่านไฟล์ได้', 'error');
+                }
+                event.target.value = ''; 
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function generatePrintReport() {
+            showToast("กำลังเตรียมเอกสารสำหรับพิมพ์...", "info");
+            
+            try {
+                const printArea = document.getElementById('printArea');
+                const currentDate = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                
+                let html = `
+                    <div class="fixed top-5 right-5 flex gap-3 no-print z-50">
+                        <button onclick="window.print()" class="px-5 py-2.5 rounded-lg text-sm font-bold bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                            สั่งพิมพ์ออกเครื่องพิมพ์
+                        </button>
+                        <button onclick="closePrintView()" class="px-5 py-2.5 rounded-lg text-sm font-bold bg-slate-700 text-white shadow-lg hover:bg-slate-800 transition-all flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            ปิดหน้ารายงาน
+                        </button>
+                    </div>
+
+                    <div class="mb-6 text-center border-b-4 border-slate-800 pb-4 pt-4 mt-12">
+                        <h2 class="text-2xl font-bold mb-2 text-slate-800">รายงานรายละเอียดการคำนวณเงินชดเชยค่า K</h2>
+                        <p class="text-sm text-slate-600"><strong>ชื่อโครงการ/เอกสาร:</strong> ${currentLoadedProjectId || 'ไม่ได้ระบุชื่อ (ยังไม่ได้บันทึก)'}</p>
+                        <p class="text-sm text-slate-600"><strong>วันที่ออกรายงาน:</strong> ${currentDate}</p>
+                    </div>
+                    <div class="space-y-6">
+                `;
+
+                let poTot = 0, incTot = 0, decTot = 0;
+
+                items.forEach(item => {
+                    const safePo = item.po !== undefined && item.po !== null ? item.po.toString() : '0';
+                    const res = calculateRow(safePo, item.kValue, item.rule);
+                    const formulaDef = K_FORMULAS[item.formula];
+                    
+                    const indices = item.indices || { base: {}, curr: {} };
+                    const base = indices.base || {};
+                    const curr = indices.curr || {};
+
+                    const poVal = parseFloat(safePo.replace(/,/g, '')) || 0;
+                    poTot += poVal;
+                    
+                    if (res.type === 'INCREASE') incTot += res.amount;
+                    if (res.type === 'DECREASE') decTot += res.amount;
+
+                    const finalK = parseFloat(item.kValue) || 0;
+
+                    let eqStr = '-';
+                    let valStr = '-';
+                    let indicesUsed = [];
+
+                    if(formulaDef) {
+                        let eqParts = [];
+                        let valParts = [];
+                        formulaDef.terms.forEach(term => {
+                            if(!term.v) {
+                                eqParts.push(`${term.c.toFixed(2)}`);
+                                valParts.push(`${term.c.toFixed(2)}`);
+                            } else {
+                                const varName = term.v;
+                                const bVal = base[varName];
+                                const cVal = curr[varName];
+                                eqParts.push(`${term.c.toFixed(2)}(${varName}t/${varName}o)`);
+                                
+                                if(bVal !== undefined && cVal !== undefined && parseFloat(bVal) > 0) {
+                                    const ratio = (parseFloat(cVal) / parseFloat(bVal)).toFixed(3);
+                                    valParts.push(`${term.c.toFixed(2)}(${ratio})`);
+                                    indicesUsed.push(`${varName}o = ${bVal}, ${varName}t = ${cVal}`);
+                                } else {
+                                    valParts.push(`${term.c.toFixed(2)}(- / -)`);
+                                }
+                            }
+                        });
+                        eqStr = eqParts.join(' + ');
+                        valStr = valParts.join(' + ');
+                    }
+
+                    html += `
+                        <div class="border-2 border-slate-300 p-5 rounded-xl break-inside-avoid shadow-sm bg-white">
+                            <h3 class="font-bold text-lg mb-3 pb-2 border-b-2 border-slate-200 text-slate-800">
+                                งวดที่ ${item.period || '-'} : ${item.name || 'ไม่ได้ระบุชื่อรายการ'}
+                            </h3>
+                            
+                            <div class="grid grid-cols-2 gap-y-3 gap-x-4 text-sm mb-5">
+                                <div><span class="text-slate-500">สูตร K ที่ใช้:</span> <strong>${formulaDef ? formulaDef.name : item.formula}</strong></div>
+                                <div><span class="text-slate-500">เกณฑ์การหักลบ:</span> <strong>หัก ${item.rule}%</strong></div>
+                                <div><span class="text-slate-500">วันที่เดือนฐาน (o):</span> <strong>${item.baseDate || 'ไม่ได้ระบุ'}</strong></div>
+                                <div><span class="text-slate-500">วันที่ส่งงาน (t):</span> <strong>${item.deliveryDate || 'ไม่ได้ระบุ'}</strong></div>
+                                <div><span class="text-slate-500">ค่างานส่งมอบ (Po):</span> <strong>${formatNum(poVal)} บาท</strong></div>
+                                <div><span class="text-slate-500">ค่า K สุทธิที่ใช้:</span> <span class="font-black text-blue-600 underline text-base">${finalK.toFixed(3)}</span></div>
+                            </div>
+
+                            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-4 text-sm">
+                                <p class="font-bold text-slate-700 mb-1">สมการค่า K (รายละเอียดการแทนค่า):</p>
+                                <p class="font-mono text-xs mb-2 bg-white p-2 rounded border border-slate-200 text-slate-600">สูตร: K = ${eqStr}</p>
+                                <p class="font-mono text-xs mb-2 text-slate-500">[ ดัชนีที่ใช้: ${indicesUsed.length > 0 ? indicesUsed.join(' | ') : 'ไม่ได้ระบุดัชนีในระบบ'} ]</p>
+                                <p class="font-mono text-sm bg-white p-2 rounded border border-slate-200 text-slate-800">แทนค่า: K = ${valStr} = <strong class="text-emerald-600">${finalK.toFixed(3)}</strong></p>
+                            </div>
+
+                            <div class="bg-slate-100 p-4 rounded-lg text-sm flex justify-between items-center border border-slate-200">
+                                <span class="font-bold text-slate-700">ผลการคำนวณเงินชดเชย 
+                                    ( ${res.type === 'INCREASE' ? 'ขอเงินเพิ่ม' : res.type === 'DECREASE' ? 'เรียกเงินคืน' : 'ไม่มีการชดเชย'} ) :
+                                </span>
+                                <span class="font-black text-xl ${res.type === 'INCREASE' ? 'text-emerald-600' : res.type === 'DECREASE' ? 'text-rose-600' : 'text-slate-500'}">
+                                    ${res.type === 'DECREASE' ? '-' : ''}${formatNum(Math.abs(res.amount))} บาท
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                const netTotal = incTot - decTot;
+                
+                html += `
+                    </div>
+                    <div class="mt-8 border-t-4 border-slate-800 pt-6 flex justify-end break-inside-avoid">
+                        <div class="w-1/2 bg-slate-50 p-6 rounded-xl border-2 border-slate-300">
+                            <h4 class="font-bold text-lg mb-4 text-slate-800 border-b border-slate-200 pb-2">สรุปยอดรวมทั้งโครงการ</h4>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between"><span class="text-slate-600">รวมค่างาน (Po):</span> <strong>${formatNum(poTot)} บาท</strong></div>
+                                <div class="flex justify-between"><span class="text-slate-600">รวมยอดขอเงินเพิ่ม (+):</span> <strong class="text-emerald-600">${formatNum(incTot)} บาท</strong></div>
+                                <div class="flex justify-between"><span class="text-slate-600">รวมยอดเรียกเงินคืน (-):</span> <strong class="text-rose-600">${formatNum(decTot)} บาท</strong></div>
+                                <div class="flex justify-between border-t border-slate-200 pt-3 mt-3 items-center">
+                                    <span class="font-bold text-slate-800 text-base">ยอดเงินชดเชยสุทธิ:</span> 
+                                    <strong class="text-2xl ${netTotal > 0 ? 'text-emerald-600' : netTotal < 0 ? 'text-rose-600' : 'text-slate-800'}">
+                                        ${netTotal < 0 ? '-' : ''}${formatNum(Math.abs(netTotal))} บาท
+                                    </strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                printArea.innerHTML = html;
+                
+                document.getElementById('app').classList.add('hidden');
+                document.getElementById('printArea').classList.remove('hidden');
+                
+                window.scrollTo(0, 0);
+
+            } catch (error) {
+                console.error("Print Error:", error);
+                showToast("เกิดข้อผิดพลาดในการสร้างรายงาน: " + error.message, "error");
+            }
+        }
+
+        function closePrintView() {
+            document.getElementById('printArea').classList.add('hidden');
+            document.getElementById('app').classList.remove('hidden');
+            window.scrollTo(0, 0);
         }
 
         // Initialize First Render
