@@ -58,6 +58,12 @@
                 <!-- Action Buttons & Global Rule Selector -->
                 <div class="flex flex-wrap items-center gap-3 shrink-0">
                     
+                    <!-- ปุ่มข้อมูลโครงการ -->
+                    <button onclick="openProjectInfoModal()" class="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-semibold bg-amber-500 text-white hover:bg-amber-600 shadow-sm transition-colors border border-amber-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        ข้อมูลโครงการ
+                    </button>
+
                     <!-- ปุ่มค่าดัชนีรายเดือน -->
                     <button onclick="openIndexModal()" class="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-semibold bg-indigo-500 text-white hover:bg-indigo-600 shadow-sm transition-colors border border-indigo-400">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -193,6 +199,60 @@
     </div>
 
     <!-- บันทึกและโหลดงาน -->
+    <div id="projectInfoModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeProjectInfoModal()"></div>
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl z-10 overflow-hidden transform transition-all">
+            <div class="bg-amber-500 px-6 py-4 flex justify-between items-center shrink-0">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <svg class="w-5 h-5 text-amber-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    กรอกข้อมูลรายละเอียดโครงการ
+                </h3>
+                <button onclick="closeProjectInfoModal()" class="text-amber-200 hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            </div>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50">
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-bold text-slate-700 mb-1">ชื่อโครงการ</label>
+                    <input type="text" id="info_name" placeholder="เช่น ถนนสาย พล.ถ.1-0010" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">ประเภทงานก่อสร้าง</label>
+                    <input type="text" id="info_type" placeholder="เช่น ถนน, อาคาร, ชลประทาน" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">ผู้รับจ้าง</label>
+                    <input type="text" id="info_contractor" placeholder="เช่น หจก. เอบีซีก่อสร้าง" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">สัญญาจ้างเลขที่</label>
+                    <input type="text" id="info_contractNo" placeholder="เช่น 12/2569" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">ลงวันที่ (เริ่มสัญญา)</label>
+                    <input type="date" id="info_date" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-bold text-slate-700 mb-1">ค่างานตามสัญญาทั้งหมด (บาท)</label>
+                    <input type="text" id="info_contractValue" placeholder="เช่น 2,000,000" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500 font-bold text-blue-700">
+                </div>
+                <div class="md:col-span-2">
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="block text-sm font-bold text-slate-700">วันที่ผู้รับจ้างขอเงินชดเชย (ภายใน 90 วันหลังวันส่งงานงวดสุดท้าย)</label>
+                        <button type="button" onclick="autoCalc90Days()" class="text-xs font-bold text-amber-600 hover:text-amber-800 bg-amber-100 px-2 py-1 rounded transition-colors shadow-sm">
+                            + คำนวณอัตโนมัติ (90 วัน)
+                        </button>
+                    </div>
+                    <input type="date" id="info_requestDate" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+            </div>
+            <div class="bg-white px-6 py-4 flex justify-end gap-3 border-t border-slate-200">
+                <button onclick="closeProjectInfoModal()" class="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">ยกเลิก</button>
+                <button onclick="saveProjectInfoLocally()" class="px-5 py-2.5 rounded-lg text-sm font-bold bg-amber-500 text-white hover:bg-amber-600 shadow-md transition-all">
+                    บันทึกข้อมูล
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="saveModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeSaveModal()"></div>
         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl z-10 overflow-hidden transform transition-all">
@@ -483,6 +543,7 @@
             { id: 3, period: '1', name: 'งานผิวจราจร AC', formula: 'K3.3', baseDate: '', deliveryDate: '', po: '', kValue: '', rule: '2', indices: { base: {}, curr: {} } }
         ];
 
+        let projectInfo = { name: '', type: '', contractNo: '', date: '', contractor: '', contractValue: '', requestDate: '' };
         let currentGlobalRule = '2';
         let activeModalItemId = null;
         let currentLoadedProjectId = null; 
@@ -847,6 +908,75 @@
             activeModalItemId = null;
         }
 
+        function getLatestDeliveryDate() {
+            let latestDate = null;
+            items.forEach(item => {
+                if (item.deliveryDate) {
+                    const d = new Date(item.deliveryDate);
+                    if (!isNaN(d.getTime())) {
+                        if (!latestDate || d > latestDate) latestDate = d;
+                    }
+                }
+            });
+            return latestDate;
+        }
+
+        function autoCalc90Days() {
+            const latestDate = getLatestDeliveryDate();
+            if (latestDate) {
+                // บวกเพิ่ม 90 วัน (90 days * 24 hrs * 60 mins * 60 secs * 1000 ms)
+                const deadline = new Date(latestDate.getTime() + (90 * 24 * 60 * 60 * 1000));
+                const yyyy = deadline.getFullYear();
+                const mm = String(deadline.getMonth() + 1).padStart(2, '0');
+                const dd = String(deadline.getDate()).padStart(2, '0');
+                document.getElementById('info_requestDate').value = `${yyyy}-${mm}-${dd}`;
+                showToast('คำนวณวันครบกำหนด 90 วันสำเร็จ', 'success');
+            } else {
+                showToast('กรุณาระบุวันส่งมอบงานในตารางก่อน', 'warning');
+            }
+        }
+
+        function openProjectInfoModal() {
+            document.getElementById('info_name').value = projectInfo.name || '';
+            document.getElementById('info_type').value = projectInfo.type || '';
+            document.getElementById('info_contractNo').value = projectInfo.contractNo || '';
+            document.getElementById('info_date').value = projectInfo.date || '';
+            document.getElementById('info_contractor').value = projectInfo.contractor || '';
+            document.getElementById('info_contractValue').value = projectInfo.contractValue || '';
+            
+            let reqDate = projectInfo.requestDate || '';
+            if (!reqDate) {
+                const latestDate = getLatestDeliveryDate();
+                if (latestDate) {
+                    const deadline = new Date(latestDate.getTime() + (90 * 24 * 60 * 60 * 1000));
+                    reqDate = `${deadline.getFullYear()}-${String(deadline.getMonth() + 1).padStart(2, '0')}-${String(deadline.getDate()).padStart(2, '0')}`;
+                }
+            }
+            document.getElementById('info_requestDate').value = reqDate;
+            
+            document.getElementById('projectInfoModal').classList.remove('hidden');
+            document.getElementById('projectInfoModal').classList.add('flex');
+        }
+
+        function closeProjectInfoModal() {
+            document.getElementById('projectInfoModal').classList.add('hidden');
+            document.getElementById('projectInfoModal').classList.remove('flex');
+        }
+
+        function saveProjectInfoLocally() {
+            projectInfo = {
+                name: document.getElementById('info_name').value,
+                type: document.getElementById('info_type').value,
+                contractNo: document.getElementById('info_contractNo').value,
+                date: document.getElementById('info_date').value,
+                contractor: document.getElementById('info_contractor').value,
+                contractValue: document.getElementById('info_contractValue').value,
+                requestDate: document.getElementById('info_requestDate').value
+            };
+            closeProjectInfoModal();
+            showToast('บันทึกข้อมูลโครงการเรียบร้อยแล้ว', 'success');
+        }
+
         function calculateLiveK() {
             if (!activeModalItemId) return;
             const item = items.find(i => i.id === activeModalItemId);
@@ -989,6 +1119,7 @@
 
             const payload = {
                 projectName: projectName,
+                projectInfo: projectInfo,
                 items: items,
                 globalRule: currentGlobalRule,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -1030,20 +1161,34 @@
                     const dateStr = data.updatedAt ? data.updatedAt.toDate().toLocaleString('th-TH') : 'ไม่ทราบวันที่';
                     
                     const li = document.createElement('li');
-                    li.className = "hover:bg-blue-50 transition-colors p-4 flex justify-between items-center cursor-pointer border-b border-slate-100";
-                    li.onclick = () => loadSpecificProject(doc.id);
+                    li.className = "hover:bg-blue-50 transition-colors p-3 flex justify-between items-center border-b border-slate-100 group";
                     
                     li.innerHTML = `
-                        <div class="flex items-start gap-3 pointer-events-none">
+                        <div class="flex items-start gap-3 cursor-pointer flex-1 py-1 load-btn">
                             <div class="bg-blue-100 p-2 rounded-lg text-blue-600 mt-1">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                             </div>
                             <div>
-                                <h4 class="font-bold text-slate-800">${data.projectName}</h4>
+                                <h4 class="font-bold text-slate-800 projectNameDisplay"></h4>
                                 <p class="text-xs text-slate-500 mt-0.5">บันทึกล่าสุด: ${dateStr}</p>
                             </div>
                         </div>
+                        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button class="rename-btn p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors" title="เปลี่ยนชื่อโครงการ">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                            </button>
+                            <button class="delete-btn p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-100 rounded-lg transition-colors" title="ลบโครงการ">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
                     `;
+                    
+                    // ป้องกันปัญหากรณีมีเครื่องหมายอัญประกาศในชื่อไฟล์
+                    li.querySelector('.projectNameDisplay').textContent = data.projectName;
+                    li.querySelector('.load-btn').onclick = () => loadSpecificProject(doc.id);
+                    li.querySelector('.rename-btn').onclick = (e) => { e.stopPropagation(); renameProject(doc.id); };
+                    li.querySelector('.delete-btn').onclick = (e) => { e.stopPropagation(); deleteProject(doc.id, e.currentTarget); };
+
                     listEl.appendChild(li);
                 });
             } catch (error) {
@@ -1058,12 +1203,94 @@
             document.getElementById('loadModal').classList.remove('flex');
         }
 
+        async function renameProject(docId) {
+            const newName = prompt(`เปลี่ยนชื่อโครงการจาก:\n"${docId}"\n\nเป็นชื่อใหม่:`, docId);
+            if (!newName || newName.trim() === "" || newName.trim() === docId) return;
+            
+            const newDocId = newName.trim();
+            
+            try {
+                // เช็คว่ามีชื่อซ้ำหรือไม่
+                const existingDoc = await db.collection(COLLECTION_NAME).doc(newDocId).get();
+                if (existingDoc.exists) {
+                    showToast('ชื่อนี้มีอยู่แล้วในระบบ กรุณาใช้ชื่ออื่น', 'error');
+                    return;
+                }
+                
+                showToast('กำลังบันทึกชื่อใหม่...', 'info');
+                
+                // คัดลอกข้อมูลไปไฟล์ใหม่
+                const oldDoc = await db.collection(COLLECTION_NAME).doc(docId).get();
+                const data = oldDoc.data();
+                data.projectName = newDocId; 
+                data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+                
+                await db.collection(COLLECTION_NAME).doc(newDocId).set(data);
+                
+                // ลบไฟล์เก่า
+                await db.collection(COLLECTION_NAME).doc(docId).delete();
+                
+                // อัปเดตป้ายกำกับถ้าเปิดไฟล์นี้อยู่
+                if (currentLoadedProjectId === docId) {
+                    currentLoadedProjectId = newDocId;
+                    const badge = document.getElementById('currentProjectBadge');
+                    badge.textContent = `ไฟล์: ${currentLoadedProjectId}`;
+                }
+                
+                showToast('เปลี่ยนชื่อสำเร็จ', 'success');
+                openLoadModal(); // โหลดรายการใหม่
+            } catch(error) {
+                console.error(error);
+                showToast('เกิดข้อผิดพลาดในการเปลี่ยนชื่อ', 'error');
+            }
+        }
+
+        async function deleteProject(docId, btnElement) {
+            // ระบบยืนยันการลบ 2 ครั้ง (Double Confirmation)
+            if (btnElement && btnElement.dataset.confirming !== "true") {
+                btnElement.dataset.confirming = "true";
+                const originalHtml = btnElement.innerHTML;
+                const originalClasses = btnElement.className;
+                
+                btnElement.innerHTML = '<span class="text-[10px] font-bold px-1.5 whitespace-nowrap">ยืนยันลบ!</span>';
+                btnElement.className = "p-1.5 text-white bg-rose-500 hover:bg-rose-600 rounded-md transition-all shadow-md";
+                
+                setTimeout(() => {
+                    if(btnElement && btnElement.dataset.confirming === "true") {
+                        btnElement.dataset.confirming = "false";
+                        btnElement.innerHTML = originalHtml;
+                        btnElement.className = originalClasses;
+                    }
+                }, 3000);
+                return;
+            }
+
+            try {
+                if (btnElement) btnElement.innerHTML = '...';
+                await db.collection(COLLECTION_NAME).doc(docId).delete();
+                
+                showToast('ลบโครงการสำเร็จ', 'success');
+                
+                // ถ้าลบไฟล์ที่กำลังเปิดอยู่ ให้เอาป้ายกำกับชื่อด้านบนออก
+                if (currentLoadedProjectId === docId) {
+                    currentLoadedProjectId = null;
+                    document.getElementById('currentProjectBadge').classList.add('hidden');
+                }
+                
+                openLoadModal(); // โหลดรายการใหม่
+            } catch(error) {
+                console.error(error);
+                showToast('ลบข้อมูลล้มเหลว', 'error');
+            }
+        }
+
         async function loadSpecificProject(docId) {
             try {
                 const doc = await db.collection(COLLECTION_NAME).doc(docId).get();
                 if (doc.exists) {
                     const data = doc.data();
                     items = data.items || [];
+                    projectInfo = data.projectInfo || { name: '', type: '', contractNo: '', date: '', contractor: '', contractValue: '', requestDate: '' };
                     currentGlobalRule = data.globalRule || '2';
                     currentLoadedProjectId = docId;
                     render();
@@ -1391,6 +1618,124 @@
                     return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
                 };
 
+                // ---------------------------------------------------------
+                // ส่วนที่ 1: สร้างหน้าสรุป แบบฟอร์มที่ 2 (Cover Page)
+                // ---------------------------------------------------------
+                let summaryRowsHtml = '';
+                let sumTotalPo = 0;
+                let sumCompensation = 0;
+                const rulePercent = currentGlobalRule === '4' ? '4%' : '2%';
+
+                const latestDateObj = getLatestDeliveryDate();
+                const lastDeliveryTxt = latestDateObj ? formatThaiDate(latestDateObj.toISOString().split('T')[0]) : '---';
+                
+                let date90DaysTxt = '---';
+                if (latestDateObj) {
+                    const deadline = new Date(latestDateObj.getTime() + (90 * 24 * 60 * 60 * 1000));
+                    date90DaysTxt = formatThaiDate(deadline.toISOString().split('T')[0]);
+                }
+                const reqDateTxt = formatThaiDate(projectInfo.requestDate) || date90DaysTxt;
+                
+                // หาเปิดซองจาก item แรก
+                const firstItem = items[0] || {};
+                const baseDateTxt = formatThaiDate(firstItem.baseDate);
+                const finalContractValue = parseFloat((projectInfo.contractValue||'').toString().replace(/,/g, '')) || 0;
+
+                items.forEach((item) => {
+                    const poVal = parseFloat((item.po||'0').toString().replace(/,/g, '')) || 0;
+                    const kVal = parseFloat(item.kValue) || 0;
+                    const upperRule = item.rule === '4' ? 1.040 : 1.020;
+                    const lowerRule = item.rule === '4' ? 0.960 : 0.980;
+
+                    let multiplier = 0;
+                    let compensation = 0;
+
+                    if (kVal > upperRule) {
+                        multiplier = truncate3(kVal - upperRule);
+                        compensation = truncate3(poVal * multiplier);
+                    } else if (kVal < lowerRule) {
+                        multiplier = truncate3(lowerRule - kVal);
+                        compensation = truncate3(poVal * multiplier) * -1;
+                    }
+
+                    sumTotalPo += poVal;
+                    sumCompensation += compensation;
+
+                    summaryRowsHtml += `
+                        <tr>
+                            <td class="border border-black p-2">${item.period || 'NaN'}</td>
+                            <td class="border border-black p-2">${formatThaiDate(item.deliveryDate)}</td>
+                            <td class="border border-black p-2 text-right">${formatNum(poVal)}</td>
+                            <td class="border border-black p-2 text-right">0</td>
+                            <td class="border border-black p-2 text-right">${formatNum(poVal)}</td>
+                            <td class="border border-black p-2">${item.formula}</td>
+                            <td class="border border-black p-2">${kVal > 0 ? kVal.toFixed(3) : ''}</td>
+                            <td class="border border-black p-2">${multiplier > 0 ? multiplier.toFixed(3) : '0.000'}</td>
+                            <td class="border border-black p-2 text-right">${compensation !== 0 ? formatNum(compensation) : '0'}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                    <div class="bg-white text-black" style="page-break-after: always; padding: 10mm 5mm; min-height: 297mm; font-size: 13pt;">
+                        <h2 class="text-center font-bold text-lg mb-6">แบบฟอร์มที่ 2 การคำนวณเงินชดเชยเพิ่มเติมค่างานก่อสร้างตามสัญญาแบบปรับราคาได้ (ค่า K)</h2>
+                        
+                        <div class="grid grid-cols-3 gap-x-4 gap-y-1 mb-6 leading-relaxed">
+                            <div>
+                                <div class="flex"><span class="w-24 font-bold">กระทรวง</span><span>กระทรวงมหาดไทย</span></div>
+                                <div class="flex"><span class="w-24 font-bold">กรม</span><span>กรมส่งเสริมการปกครองท้องถิ่น</span></div>
+                                <div class="flex"><span class="w-24 font-bold">สัญญาเลขที่</span><span>${projectInfo.contractNo || "---"}</span></div>
+                                <div class="flex"><span class="w-24 font-bold">ผู้รับจ้าง</span><span>${projectInfo.contractor || "---"}</span></div>
+                            </div>
+                            <div>
+                                <div class="flex"><span class="w-36 font-bold">ชื่อโครงการ</span><span class="flex-1 truncate">${projectInfo.name || firstItem.name || "---"}</span></div>
+                                <div class="flex"><span class="w-36 font-bold">วันที่เปิดซองประกวดราคา</span><span>${baseDateTxt}</span></div>
+                                <div class="flex"><span class="w-36 font-bold">ค่างานทั้งสัญญา</span><span>${formatNum(finalContractValue > 0 ? finalContractValue : sumTotalPo)}</span></div>
+                                <div class="flex"><span class="w-36 font-bold">สัญญาเริ่ม</span><span>${formatThaiDate(projectInfo.date) || "---"}</span></div>
+                            </div>
+                            <div>
+                                <div class="flex"><span class="w-40 font-bold">วันที่ส่งงานงวดสุด</span><span>${lastDeliveryTxt}</span></div>
+                                <div class="flex"><span class="w-40 font-bold">วันที่ครบ 90 วันหลัง</span><span>${date90DaysTxt}</span></div>
+                                <div class="flex"><span class="w-40 font-bold">วันที่ผู้รับจ้างขอเงิน</span><span>${reqDateTxt}</span></div>
+                                <div class="flex"><span class="w-40 font-bold">สัญญาสิ้นสุด</span><span>---</span></div>
+                            </div>
+                        </div>
+
+                        <table class="w-full border-collapse border border-black text-center mb-4 text-sm">
+                            <thead>
+                                <tr class="font-bold bg-slate-50">
+                                    <th class="border border-black p-2">งวด</th>
+                                    <th class="border border-black p-2">วันที่</th>
+                                    <th class="border border-black p-2">ค่างานทั้งหมด</th>
+                                    <th class="border border-black p-2">ไม่อยู่ในข่าย</th>
+                                    <th class="border border-black p-2">ได้รับพิจารณา</th>
+                                    <th class="border border-black p-2">สูตร K</th>
+                                    <th class="border border-black p-2">ค่า K</th>
+                                    <th class="border border-black p-2">หัก ${rulePercent} ชดเชย</th>
+                                    <th class="border border-black p-2">เงินชดเชยที่คำนวณได้</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${summaryRowsHtml}
+                                <tr class="font-bold bg-slate-50">
+                                    <td class="border border-black p-2 text-center" colspan="2">ยอดรวมทั้งสิ้น</td>
+                                    <td class="border border-black p-2 text-right">${formatNum(sumTotalPo)}</td>
+                                    <td class="border border-black p-2 text-right">0</td>
+                                    <td class="border border-black p-2 text-right">${formatNum(sumTotalPo)}</td>
+                                    <td class="border border-black p-2" colspan="3"></td>
+                                    <td class="border border-black p-2 text-right">${formatNum(sumCompensation)}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="text-red-600 font-semibold text-sm mt-4">
+                            * หมายถึงค่า K ของเดือนสิ้นสุดสัญญา ซึ่งที่มีค่าน้อยกว่าค่า K ของเดือนส่งงานงวดนั้นๆ โดยจะมีการเปรียบเทียบก็ต่อเมื่อวันส่งงานของงวดนั้นๆ ช้ากว่าวันสิ้นสุดสัญญา
+                        </div>
+                    </div>
+                `;
+
+                // ---------------------------------------------------------
+                // ส่วนที่ 2: สร้างหน้าแสดงรายการคำนวณ (Calculation Details) ทีละงวด
+                // ---------------------------------------------------------
                 items.forEach((item, index) => {
                     const safePo = item.po !== undefined && item.po !== null ? item.po.toString() : '0';
                     const poVal = parseFloat(safePo.replace(/,/g, '')) || 0;
@@ -1411,11 +1756,11 @@
                         <div class="bg-white text-black text-sm pb-10" style="page-break-after: always; min-height: 297mm; padding: 20mm;">
                             <div class="text-center font-bold text-lg mb-8">แสดงรายการคำนวณค่า K</div>
                             
-                            <table class="w-full mb-6">
-                                <tr><td class="w-32 align-top">งานก่อสร้าง</td><td class="font-medium underline decoration-dotted underline-offset-4">${item.name || '---'}</td></tr>
-                                <tr><td class="w-32 align-top">สัญญาเลขที่</td><td class="font-medium underline decoration-dotted underline-offset-4">${projectName}</td></tr>
-                                <tr><td class="w-32 align-top">งวดที่</td><td class="font-medium underline decoration-dotted underline-offset-4">${item.period || 'สุดท้าย'}</td></tr>
-                                <tr><td class="w-32 align-top">สูตร</td><td class="font-medium">${formulaEqStr}</td></tr>
+                            <table class="w-full mb-6 leading-relaxed">
+                                <tr><td class="w-40 align-top">งานก่อสร้าง</td><td class="font-medium underline decoration-dotted underline-offset-4">${projectInfo.type || '---'}</td></tr>
+                                <tr><td class="w-40 align-top">สัญญาเลขที่</td><td class="font-medium">${projectInfo.contractNo || '---'}</td></tr>
+                                <tr><td class="w-40 align-top">งวดที่</td><td class="font-medium underline decoration-dotted underline-offset-4">${item.period || 'สุดท้าย'}</td></tr>
+                                <tr><td class="w-40 align-top">สูตร</td><td class="font-medium">${formulaEqStr}</td></tr>
                             </table>
 
                             <div class="font-bold mb-1">ดัชนีราคาวัสดุก่อสร้าง</div>
@@ -1491,35 +1836,39 @@
                     finalK = truncate3(finalK); // บังคับ 3 ตำแหน่งเผื่อไว้
                     let delta = 0;
                     let actionText = '';
+                    let resultLabel = 'เงินชดเชยที่คำนวณได้';
                     
                     if (finalK > upperRule) {
                         delta = truncate3(finalK - upperRule);
                         actionText = `Escalation Factor ที่หักด้วย ${rulePercent} เมื่อต้องเพิ่มค่างาน`;
+                        resultLabel = 'เงินชดเชยที่คำนวณได้ (รัฐต้องจ่ายเงินเพิ่ม)';
                     } else if (finalK < lowerRule) {
                         delta = truncate3(lowerRule - finalK);
                         actionText = `Escalation Factor ที่หักด้วย ${rulePercent} เมื่อต้องเรียกเงินคืน`;
+                        resultLabel = 'เงินชดเชยที่คำนวณได้ (รัฐต้องเรียกเงินคืน)';
                     } else {
                         actionText = `Escalation Factor อยู่ในเกณฑ์ที่ไม่ต้องเพิ่มหรือเรียกเงินคืน`;
+                        resultLabel = 'เงินชดเชยที่คำนวณได้ (ไม่มีการชดเชยหรือเรียกคืน)';
                     }
 
-                    const finalCompensation = poVal * delta;
+                    const finalCompensation = truncate3(poVal * delta);
 
                     html += `
                             <table class="w-full mb-8">
                                 <tr><td class="w-32">K${item.formula.replace('K','')}</td><td colspan="2" class="font-bold">= ${finalK.toFixed(3)}</td></tr>
                                 <tr><td class="w-32">สูตร</td><td colspan="2">= (Po) x (K)</td></tr>
-                                <tr><td class="w-32 align-top">K</td><td class="w-80 underline decoration-blue-600 underline-offset-4 text-blue-800">= ${actionText}</td><td></td></tr>
+                                <tr><td class="w-32 align-top">K</td><td class="w-80 underline decoration-black underline-offset-4">= ${actionText}</td><td></td></tr>
                                 <tr><td class="w-32"></td><td colspan="2" class="font-bold text-base">= ${delta.toFixed(3)}</td></tr>
                             </table>
 
                             <table class="w-full mb-8">
-                                <tr><td class="w-32">Po</td><td class="w-64 underline decoration-blue-600 underline-offset-4 text-blue-800">= ราคาค่างานงวด</td><td class="font-bold">= ${formatNum(poVal)} บาท</td></tr>
-                                <tr><td class="w-32"></td><td class="w-64">ค่างานที่ไม่อยู่ในข่าย</td><td class="font-bold">= 0 บาท</td></tr>
-                                <tr><td class="w-32"></td><td class="w-64">เหลือค่างานที่ได้รับพิจารณา</td><td class="font-bold">= ${formatNum(poVal)} บาท</td></tr>
+                                <tr><td class="w-32">Po</td><td class="w-64 underline decoration-black underline-offset-4">= ราคาค่างานงวด</td><td class="font-bold">= ${formatNum(poVal)} บาท</td></tr>
+                                <tr><td class="w-32"></td><td class="w-64 pl-4">ค่างานที่ไม่อยู่ในข่าย</td><td class="font-bold">= 0 บาท</td></tr>
+                                <tr><td class="w-32"></td><td class="w-64 pl-4">เหลือค่างานที่ได้รับพิจารณา</td><td class="font-bold">= ${formatNum(poVal)} บาท</td></tr>
                             </table>
 
                             <table class="w-full">
-                                <tr><td class="w-48 font-bold">เงินชดเชยที่คำนวณได้</td><td class="font-bold text-lg">= ${formatNum(finalCompensation)} บาท</td></tr>
+                                <tr><td class="w-64 font-bold text-base">${resultLabel}</td><td class="font-bold text-lg text-black">= ${formatNum(finalCompensation)} บาท</td></tr>
                             </table>
                         </div>
                     `;
@@ -1563,23 +1912,30 @@
                 return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
             };
 
-            // ดึงข้อมูลพื้นฐานจากรายการแรกและรายการสุดท้าย
             const firstItem = items[0] || {};
-            const lastItem = items[items.length - 1] || {};
             const prjName = firstItem.name || '---';
             const baseDateTxt = formatThaiDateStr(firstItem.baseDate);
-            const lastDeliveryTxt = formatThaiDateStr(lastItem.deliveryDate);
+            
+            const latestDateObj = getLatestDeliveryDate();
+            const lastDeliveryTxt = latestDateObj ? formatThaiDateStr(latestDateObj.toISOString().split('T')[0]) : '---';
+            
+            let date90DaysTxt = '---';
+            if (latestDateObj) {
+                const deadline = new Date(latestDateObj.getTime() + (90 * 24 * 60 * 60 * 1000));
+                date90DaysTxt = formatThaiDateStr(deadline.toISOString().split('T')[0]);
+            }
             
             let totalContractValue = 0;
             items.forEach(i => totalContractValue += (parseFloat((i.po||'0').toString().replace(/,/g, '')) || 0));
 
-            // สร้างโครงสร้างข้อมูล (Array of Arrays) ตามแบบฟอร์มเป๊ะๆ
+            const finalContractValue = parseFloat((projectInfo.contractValue||'').toString().replace(/,/g, '')) || totalContractValue;
+
             const ws_data = [
                 ["แบบฟอร์มที่ 2 การคำนวณเงินชดเชยเพิ่มเติมค่างานก่อสร้างตามสัญญาแบบปรับราคาได้ (ค่า K)", "", "", "", "", "", "", "", ""],
-                ["กระทรวง", "กระทรวงมหาดไทย", "", "ชื่อโครงการ", prjName, "", "วันที่ส่งงานงวดสุด", lastDeliveryTxt, ""],
-                ["กรม", "กรมส่งเสริมการปกครองท้องถิ่น", "", "วันที่เปิดซองประกวดราคา", baseDateTxt, "", "วันที่ครบ 90 วันหลัง", "", ""],
-                ["สัญญาเลขที่", projectName, "", "ค่างานทั้งสัญญา", totalContractValue, "", "วันที่ผู้รับจ้างขอเงิน", lastDeliveryTxt, ""],
-                ["ผู้รับจ้าง", "---", "", "สัญญาเริ่ม", "", "", "สัญญาสิ้นสุด", "", ""],
+                ["กระทรวง", "กระทรวงมหาดไทย", "", "ชื่อโครงการ", projectInfo.name || prjName, "", "วันที่ส่งงานงวดสุด", lastDeliveryTxt, ""],
+                ["กรม", "กรมส่งเสริมการปกครองท้องถิ่น", "", "วันที่เปิดซองประกวดราคา", baseDateTxt, "", "วันที่ครบ 90 วันหลัง", date90DaysTxt, ""],
+                ["สัญญาเลขที่", projectInfo.contractNo || "---", "", "ค่างานทั้งสัญญา", finalContractValue, "", "วันที่ผู้รับจ้างขอเงิน", formatThaiDateStr(projectInfo.requestDate) || date90DaysTxt, ""],
+                ["ผู้รับจ้าง", projectInfo.contractor || "---", "", "สัญญาเริ่ม", formatThaiDateStr(projectInfo.date) || "", "", "สัญญาสิ้นสุด", "", ""],
                 ["", "", "", "", "", "", "", "", ""],
                 ["งวด", "วันที่", "ค่างานทั้งหมด", "ไม่อยู่ในข่าย", "ได้รับพิจารณา", "สูตร K", "ค่า K", `หัก ${rulePercent} ชดเชย`, "เงินชดเชยที่คำนวณได้"]
             ];
