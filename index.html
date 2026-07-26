@@ -9,9 +9,9 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
     
-    <!-- เพิ่ม Library สำหรับวาดกราฟ (Chart.js) และ อ่านไฟล์ Excel (SheetJS) -->
+    <!-- เพิ่ม Library สำหรับวาดกราฟ (Chart.js) และ อ่าน/เขียนไฟล์ Excel แบบจัดสไตล์ได้ (xlsx-js-style) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
@@ -487,6 +487,23 @@
         let activeModalItemId = null;
         let currentLoadedProjectId = null; 
 
+        // ฟังก์ชัน "ตัดเศษทิ้ง" (Truncation) 3 ตำแหน่ง ตามมาตรฐานโปรแกรม CUCEM-K
+        // สำคัญ: ต้องตัดทิ้ง 2 จังหวะ (ตอนหาร และ ตอนคูณ)
+        function truncate3(num) {
+            // แก้ปัญหา Floating point ของ JS (เช่น 1.08899999) โดยแปลงเป็นทศนิยม 6 ตำแหน่งก่อนตัดทิ้งอย่างแม่นยำ
+            const numStr = Number(num).toFixed(6);
+            const parts = numStr.split('.');
+            if (parts.length > 1) {
+                return parseFloat(parts[0] + '.' + parts[1].substring(0, 3));
+            }
+            return parseFloat(num);
+        }
+
+        // ฟังก์ชันปัดเศษทศนิยมตามมาตรฐานรัฐ สำหรับหน้าตารางหลัก
+        function round3(num) {
+            return Number(Math.round(num + "e3") + "e-3");
+        }
+
         function showToast(message, type = 'success') {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
@@ -546,8 +563,14 @@
             const upper = rule === '4' ? 1.040 : 1.020;
             const lower = rule === '4' ? 0.960 : 0.980;
             
-            if (k > upper) return { amount: po * (k - upper), type: 'INCREASE', multiplier: k - upper };
-            if (k < lower) return { amount: po * (lower - k), type: 'DECREASE', multiplier: lower - k };
+            if (k > upper) {
+                const multiplier = parseFloat((k - upper).toFixed(3)); // แก้ไขปัญหา JS Floating point โดยบังคับ 3 ตำแหน่ง
+                return { amount: po * multiplier, type: 'INCREASE', multiplier: multiplier };
+            }
+            if (k < lower) {
+                const multiplier = parseFloat((lower - k).toFixed(3)); // แก้ไขปัญหา JS Floating point โดยบังคับ 3 ตำแหน่ง
+                return { amount: po * multiplier, type: 'DECREASE', multiplier: multiplier };
+            }
             return { amount: 0, type: 'NONE', multiplier: 0 };
         }
 
@@ -648,13 +671,28 @@
 
             const netTotal = incTot - decTot;
             
+            let statusMessage = '';
+            if (netTotal > 0) {
+                statusMessage = `<div class="mt-3 p-2.5 bg-emerald-100 border border-emerald-200 rounded-lg text-center text-sm font-bold text-emerald-700 shadow-sm flex items-center justify-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> สรุป: รัฐต้องจ่ายเงินชดเชยเพิ่มให้ "ผู้รับจ้าง"</div>`;
+            } else if (netTotal < 0) {
+                statusMessage = `<div class="mt-3 p-2.5 bg-rose-100 border border-rose-200 rounded-lg text-center text-sm font-bold text-rose-700 shadow-sm flex items-center justify-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> สรุป: รัฐต้อง "เรียกเงินคืน" จากผู้รับจ้าง</div>`;
+            } else {
+                statusMessage = `<div class="mt-3 p-2.5 bg-slate-100 border border-slate-200 rounded-lg text-center text-sm font-bold text-slate-600 shadow-sm">สรุป: ไม่มีการจ่ายเงินชดเชยหรือเรียกเงินคืน</div>`;
+            }
+            
             document.getElementById('summaryDiv').innerHTML = `
                 <div class="flex justify-between items-center border-b border-slate-200 pb-2 mb-4">
                     <h3 class="text-slate-500 font-bold text-sm uppercase tracking-wider">สรุปยอดสุทธิ (งวดนี้)</h3>
-                    <button onclick="generatePrintReport()" class="text-xs flex items-center gap-1.5 bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-md hover:bg-slate-200 transition-colors border border-slate-300 shadow-sm">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                        พิมพ์รายงานคำนวณ
-                    </button>
+                    <div class="flex gap-2">
+                        <button onclick="exportToExcel()" class="text-xs flex items-center gap-1.5 bg-emerald-50 text-emerald-700 font-bold px-3 py-1.5 rounded-md hover:bg-emerald-100 transition-colors border border-emerald-300 shadow-sm" title="นำออกแบบฟอร์มที่ 2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            ส่งออก Excel
+                        </button>
+                        <button onclick="generatePrintReport()" class="text-xs flex items-center gap-1.5 bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-md hover:bg-slate-200 transition-colors border border-slate-300 shadow-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                            พิมพ์รายงานคำนวณ
+                        </button>
+                    </div>
                 </div>
                 <div class="space-y-3 mb-5">
                     <div class="flex justify-between text-sm items-center">
@@ -670,11 +708,14 @@
                         <span class="font-bold text-rose-600 text-lg">${formatNum(decTot)}</span>
                     </div>
                 </div>
-                <div class="flex justify-between items-center border-t border-slate-200 pt-4 bg-slate-50/50 -mx-6 px-6 -mb-6 pb-6 rounded-b-xl">
-                    <span class="text-base font-bold text-slate-800">เงินชดเชยสุทธิ:</span>
-                    <span class="text-3xl font-black ${netTotal > 0 ? 'text-emerald-600' : netTotal < 0 ? 'text-rose-600' : 'text-slate-500'}">
-                        ${netTotal < 0 ? '-' : ''}${formatNum(Math.abs(netTotal))}
-                    </span>
+                <div class="border-t border-slate-200 pt-4 bg-slate-50/50 -mx-6 px-6 -mb-6 pb-6 rounded-b-xl">
+                    <div class="flex justify-between items-center">
+                        <span class="text-base font-bold text-slate-800">เงินชดเชยสุทธิ:</span>
+                        <span class="text-3xl font-black ${netTotal > 0 ? 'text-emerald-600' : netTotal < 0 ? 'text-rose-600' : 'text-slate-500'}">
+                            ${netTotal < 0 ? '-' : ''}${formatNum(Math.abs(netTotal))}
+                        </span>
+                    </div>
+                    ${statusMessage}
                 </div>
             `;
         }
@@ -818,7 +859,7 @@
             formulaDef.terms.forEach(term => {
                 if (term.v === null || term.v === undefined) {
                     totalK += term.c;
-                    equationParts.push(`${term.c.toFixed(2)}`);
+                    equationParts.push(`${term.c.toFixed(3)}`);
                 } else {
                     const varName = term.v;
                     const elB = document.getElementById(`modal_b_${varName}`);
@@ -830,15 +871,35 @@
                         const ratioEl = document.getElementById(`modal_ratio_${varName}`);
 
                         if (bVal > 0 && cVal >= 0) {
-                            const ratioStr = (cVal / bVal).toFixed(3);
+                            // 1. จังหวะหาร (t/o): แปลงเป็น string เพื่อตัดทิ้ง 3 ตำแหน่งดื้อๆ แบบ CUCEM-K
+                            let ratioNumStr = (cVal / bVal).toString();
+                            let ratioStr = ratioNumStr;
+                            if (ratioNumStr.indexOf('.') !== -1) {
+                                const parts = ratioNumStr.split('.');
+                                ratioStr = parts[0] + '.' + parts[1].padEnd(3, '0').substring(0, 3);
+                            } else {
+                                ratioStr = ratioNumStr + '.000';
+                            }
                             const ratioNum = parseFloat(ratioStr);
                             
                             ratioEl.textContent = ratioStr;
                             ratioEl.className = "col-span-2 text-center text-xs font-mono font-bold text-blue-600 bg-blue-50 py-1 rounded";
 
-                            const termValue = term.c * ratioNum;
-                            totalK += termValue;
-                            equationParts.push(`${term.c.toFixed(2)}(${ratioStr})`);
+                            // 2. จังหวะคูณสัดส่วน: คูณเสร็จแล้ว ต้องตัดทิ้ง 3 ตำแหน่งอีกรอบ
+                            let termValueStr = (term.c * ratioNum).toString();
+                            let finalTermStr = termValueStr;
+                            if (termValueStr.indexOf('.') !== -1) {
+                                const parts = termValueStr.split('.');
+                                finalTermStr = parts[0] + '.' + parts[1].padEnd(3, '0').substring(0, 3);
+                            } else {
+                                finalTermStr = termValueStr + '.000';
+                            }
+                            const finalTermValue = parseFloat(finalTermStr);
+                            
+                            totalK += finalTermValue;
+                            
+                            // แสดงตัวเลขที่ถูกตัดเศษแล้วในสมการ
+                            equationParts.push(`${finalTermStr}`);
                         } else {
                             allValid = false;
                             ratioEl.textContent = "-";
@@ -851,9 +912,11 @@
 
             const resultEl = document.getElementById('modalResultK');
             if (allValid) {
+                // ผลรวม K สุดท้าย โชว์ 3 ตำแหน่ง
                 const finalK = totalK.toFixed(3);
                 resultEl.textContent = finalK;
                 resultEl.className = "text-4xl font-black text-emerald-600 drop-shadow-sm";
+                // แสดงสมการแบบบวกกันให้เห็นชัดๆ ตามภาพ (0.300 + 0.108 + ...)
                 document.getElementById('modalFormulaEquation').innerHTML = `K = ${equationParts.join(' + ')} = <span class="font-bold text-emerald-600">${finalK}</span>`;
             } else {
                 resultEl.textContent = "0.000";
@@ -1026,38 +1089,51 @@
         function processSmartPaste(text) {
             if (!text || text.trim() === '') return;
             
+            // คีย์เวิร์ดที่ครอบคลุม
             const keywords = {
-                'M': ['วัสดุก่อสร้าง', 'วัสดุ', 'M =', 'M='],
-                'A': ['แอสฟัลท์', 'ยางมะตอย', 'A =', 'A='],
-                'S': ['ดัชนีเหล็ก', 'เหล็ก', 'S =', 'S='],
-                'E': ['เครื่องจักรกล', 'เครื่องจักร', 'E =', 'E='],
-                'C': ['ซีเมนต์', 'C =', 'C='],
+                'M': ['ดัชนีรวม', 'วัสดุก่อสร้าง', 'วัสดุ', 'M =', 'M='],
+                'A': ['แอสฟัลท์', 'ยางมะตอย', 'Asphalt', 'A =', 'A='],
+                'S': ['ดัชนีเหล็ก', 'ผลิตภัณฑ์เหล็ก', 'เหล็ก', 'S =', 'S='],
+                'E': ['เครื่องจักรกล', 'เครื่องจักร', 'อุปกรณ์', 'E =', 'E='],
+                'C': ['ซีเมนต์', 'ปูนซีเมนต์', 'C =', 'C='],
                 'GIP': ['ท่อสังกะสี', 'ท่อเหล็กอาบสังกะสี', 'GIP'],
                 'G': ['เหล็กแผ่นเรียบ', 'เหล็กแผ่น', 'G =', 'G='],
-                'AC': ['ท่อใยหิน', 'AC =', 'AC='],
-                'I': ['ผู้บริโภค', 'I =', 'I='],
-                'PVC': ['ท่อ PVC', 'PVC =', 'PVC='],
-                'F': ['น้ำมันดีเซล', 'น้ำมัน', 'ดีเซล', 'F =', 'F='],
-                'W': ['สายไฟฟ้า', 'สายไฟ', 'W =', 'W='],
-                'PE': ['HDPE', 'POLYETHYLENE', 'PE =', 'PE=']
+                'AC': ['ท่อใยหิน', 'ซีเมนต์ใยหิน', 'AC =', 'AC='],
+                'I': ['ผู้บริโภค', 'ดัชนีราคาผู้บริโภค', 'I =', 'I='],
+                'PVC': ['ท่อ PVC', 'พลาสติก', 'พีวีซี', 'PVC =', 'PVC='],
+                'F': ['น้ำมันดีเซล', 'ดีเซลหมุนเร็ว', 'น้ำมัน', 'ดีเซล', 'F =', 'F='],
+                'W': ['สายไฟฟ้า', 'สายไฟ', 'เคเบิล', 'W =', 'W='],
+                'PE': ['HDPE', 'POLYETHYLENE', 'โพลีเอทิลีน', 'PE =', 'PE=']
             };
 
             let matchCount = 0;
+            // 1. นำข้อความที่ก๊อปปี้มา ลบการขึ้นบรรทัดใหม่ทิ้งทั้งหมด และยุบช่องว่างให้เหลือแค่ 1 เคาะ (กำจัดขยะจาก PDF)
+            const cleanText = text.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ');
 
             for (const [key, words] of Object.entries(keywords)) {
                 for (const word of words) {
-                    const regex = new RegExp(word + '[^0-9]*([0-9]+\\.[0-9]+|[0-9]+)', 'i');
-                    const match = text.match(regex);
-                    
-                    if (match && match[1]) {
-                        const el = document.getElementById(`idx_${key}`);
-                        if (el && el.value !== match[1]) {
-                            el.value = match[1];
-                            el.classList.add('bg-emerald-100', 'ring-2', 'ring-emerald-500', 'transition-all');
-                            setTimeout(() => el.classList.remove('bg-emerald-100', 'ring-2', 'ring-emerald-500'), 1500);
-                            matchCount++;
+                    // หาตำแหน่งของคำว่ามันอยู่ตรงไหนของข้อความ
+                    const index = cleanText.indexOf(word);
+                    if (index !== -1) {
+                        // 2. ตัดข้อความเอาเฉพาะ "ส่วนที่อยู่หลังจากคำนี้" ไปจนจบ
+                        const afterWord = cleanText.substring(index + word.length);
+                        
+                        // 3. วิ่งหา "ตัวเลขชุดแรก" ที่เจอ (ความยาว 2-5 หลัก รองรับทั้งมีและไม่มีทศนิยม) 
+                        // เลี่ยงตัวเลข 1 หลักเพราะอาจจะเป็นลำดับข้อ
+                        const match = afterWord.match(/(\d{2,5}(?:\.\d+)?)/); 
+                        
+                        if (match) {
+                            const val = parseFloat(match[0]);
+                            const el = document.getElementById(`idx_${key}`);
+                            
+                            if (el && el.value != val) {
+                                el.value = val;
+                                el.classList.add('bg-emerald-100', 'ring-2', 'ring-emerald-500', 'transition-all');
+                                setTimeout(() => el.classList.remove('bg-emerald-100', 'ring-2', 'ring-emerald-500'), 1500);
+                                matchCount++;
+                                break; // พอเจอและใส่ค่าแล้ว ให้ข้ามไปหาดัชนีตัวต่อไปเลย
+                            }
                         }
-                        break; 
                     }
                 }
             }
@@ -1065,6 +1141,8 @@
             if(matchCount > 0) {
                 showToast(`ดึงตัวเลขสำเร็จ ${matchCount} รายการ`, 'success');
                 setTimeout(() => { document.getElementById('smartPasteArea').value = ''; }, 1500);
+            } else {
+                showToast(`ไม่พบข้อมูลที่ตรงกับดัชนี กรุณาตรวจสอบข้อความ`, 'warning');
             }
         }
 
@@ -1170,7 +1248,7 @@
                             <td class="p-3">${idx.W || '<span class="text-rose-300">-</span>'}</td>
                             <td class="p-3">${idx.PE || '<span class="text-rose-300">-</span>'}</td>
                             <td class="p-3">
-                                <button onclick="deleteIndexData('${data.id}')" class="text-rose-400 hover:text-rose-600 hover:bg-rose-50 p-2 rounded-md transition-colors shadow-sm border border-transparent hover:border-rose-200 bg-white" title="ลบข้อมูลเดือนนี้">
+                                <button onclick="deleteIndexData('${data.id}', this)" class="text-rose-400 hover:text-rose-600 hover:bg-rose-50 p-2 rounded-md transition-colors shadow-sm border border-transparent hover:border-rose-200 bg-white" title="ลบข้อมูลเดือนนี้">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                 </button>
                             </td>
@@ -1220,16 +1298,37 @@
             document.getElementById('allIndicesModal').classList.remove('flex');
         }
 
-        async function deleteIndexData(docId) {
-            if(confirm(`คุณต้องการลบข้อมูลดัชนีของเดือน ${formatMonthYear(docId)} ใช่หรือไม่?\n(เมื่อลบแล้วจะไม่สามารถกู้คืนได้)`)) {
-                try {
-                    await db.collection('k_factor_master_indices').doc(docId).delete();
-                    showToast('ลบข้อมูลสำเร็จ', 'success');
-                    openAllIndicesModal(); 
-                } catch(error) {
-                    console.error(error);
-                    showToast('ลบข้อมูลล้มเหลว', 'error');
-                }
+        async function deleteIndexData(docId, btnElement) {
+            // ระบบยืนยันการลบแบบกด 2 ครั้ง (หลีกเลี่ยงการใช้ confirm popup)
+            if (btnElement && btnElement.dataset.confirming !== "true") {
+                btnElement.dataset.confirming = "true";
+                const originalHtml = btnElement.innerHTML;
+                const originalClasses = btnElement.className;
+                
+                // เปลี่ยนปุ่มเป็นสถานะเตือน
+                btnElement.innerHTML = '<span class="text-[10px] font-bold px-1 whitespace-nowrap">กดยืนยันลบ!</span>';
+                btnElement.className = "text-white bg-rose-500 hover:bg-rose-600 py-1.5 px-2 rounded-md transition-all shadow-md";
+                
+                // คืนค่าเดิมถ้ายกเลิก (ไม่กดซ้ำใน 3 วินาที)
+                setTimeout(() => {
+                    if(btnElement && btnElement.dataset.confirming === "true") {
+                        btnElement.dataset.confirming = "false";
+                        btnElement.innerHTML = originalHtml;
+                        btnElement.className = originalClasses;
+                    }
+                }, 3000);
+                return;
+            }
+
+            // ถ้ากดซ้ำครั้งที่ 2 ดำเนินการลบ
+            try {
+                if (btnElement) btnElement.innerHTML = '<svg class="animate-spin h-4 w-4 text-white mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+                await db.collection('k_factor_master_indices').doc(docId).delete();
+                showToast('ลบข้อมูลสำเร็จ', 'success');
+                openAllIndicesModal(); // โหลดหน้าจอใหม่
+            } catch(error) {
+                console.error(error);
+                showToast('ลบข้อมูลล้มเหลว', 'error');
             }
         }
 
@@ -1268,7 +1367,7 @@
             
             try {
                 const printArea = document.getElementById('printArea');
-                const currentDate = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                const projectName = document.getElementById('saveProjectNameInput') ? document.getElementById('saveProjectNameInput').value : (currentLoadedProjectId || '---');
                 
                 let html = `
                     <div class="fixed top-5 right-5 flex gap-3 no-print z-50">
@@ -1281,119 +1380,150 @@
                             ปิดหน้ารายงาน
                         </button>
                     </div>
-
-                    <div class="mb-6 text-center border-b-4 border-slate-800 pb-4 pt-4 mt-12">
-                        <h2 class="text-2xl font-bold mb-2 text-slate-800">รายงานรายละเอียดการคำนวณเงินชดเชยค่า K</h2>
-                        <p class="text-sm text-slate-600"><strong>ชื่อโครงการ/เอกสาร:</strong> ${currentLoadedProjectId || 'ไม่ได้ระบุชื่อ (ยังไม่ได้บันทึก)'}</p>
-                        <p class="text-sm text-slate-600"><strong>วันที่ออกรายงาน:</strong> ${currentDate}</p>
-                    </div>
-                    <div class="space-y-6">
                 `;
 
-                let poTot = 0, incTot = 0, decTot = 0;
+                // ฟังก์ชันช่วยจัดฟอร์แมตวันที่แบบไทย
+                const formatThaiDate = (dateString) => {
+                    if (!dateString) return '---';
+                    const d = new Date(dateString);
+                    if (isNaN(d.getTime())) return dateString;
+                    const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+                    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
+                };
 
-                items.forEach(item => {
+                items.forEach((item, index) => {
                     const safePo = item.po !== undefined && item.po !== null ? item.po.toString() : '0';
-                    const res = calculateRow(safePo, item.kValue, item.rule);
-                    const formulaDef = K_FORMULAS[item.formula];
-                    
-                    const indices = item.indices || { base: {}, curr: {} };
-                    const base = indices.base || {};
-                    const curr = indices.curr || {};
-
                     const poVal = parseFloat(safePo.replace(/,/g, '')) || 0;
-                    poTot += poVal;
-                    
-                    if (res.type === 'INCREASE') incTot += res.amount;
-                    if (res.type === 'DECREASE') decTot += res.amount;
+                    const formulaDef = K_FORMULAS[item.formula];
+                    const base = item.indices?.base || {};
+                    const curr = item.indices?.curr || {};
+                    const rulePercent = item.rule === '4' ? '4.00%' : '2.00%';
+                    const upperRule = item.rule === '4' ? 1.040 : 1.020;
+                    const lowerRule = item.rule === '4' ? 0.960 : 0.980;
 
-                    const finalK = parseFloat(item.kValue) || 0;
+                    let formulaEqStr = '';
+                    if (formulaDef) {
+                        formulaEqStr = formulaDef.terms.map(t => t.v ? `${t.c.toFixed(1)} ${t.v}t/${t.v}o` : `${t.c.toFixed(1)}`).join(' + ');
+                    }
 
-                    let eqStr = '-';
-                    let valStr = '-';
-                    let indicesUsed = [];
+                    // เริ่มสร้างหน้า A4 แต่ละหน้า
+                    html += `
+                        <div class="bg-white text-black text-sm pb-10" style="page-break-after: always; min-height: 297mm; padding: 20mm;">
+                            <div class="text-center font-bold text-lg mb-8">แสดงรายการคำนวณค่า K</div>
+                            
+                            <table class="w-full mb-6">
+                                <tr><td class="w-32 align-top">งานก่อสร้าง</td><td class="font-medium underline decoration-dotted underline-offset-4">${item.name || '---'}</td></tr>
+                                <tr><td class="w-32 align-top">สัญญาเลขที่</td><td class="font-medium underline decoration-dotted underline-offset-4">${projectName}</td></tr>
+                                <tr><td class="w-32 align-top">งวดที่</td><td class="font-medium underline decoration-dotted underline-offset-4">${item.period || 'สุดท้าย'}</td></tr>
+                                <tr><td class="w-32 align-top">สูตร</td><td class="font-medium">${formulaEqStr}</td></tr>
+                            </table>
 
-                    if(formulaDef) {
-                        let eqParts = [];
-                        let valParts = [];
-                        formulaDef.terms.forEach(term => {
-                            if(!term.v) {
-                                eqParts.push(`${term.c.toFixed(2)}`);
-                                valParts.push(`${term.c.toFixed(2)}`);
+                            <div class="font-bold mb-1">ดัชนีราคาวัสดุก่อสร้าง</div>
+                            <div class="grid grid-cols-2 gap-8 mb-8">
+                                <div>
+                                    <table class="w-full">
+                                        <tr><td class="w-40 pb-1">เปิดซองประกวดราคา</td><td class="pb-1">${formatThaiDate(item.baseDate)}</td></tr>
+                                        ${formulaDef ? formulaDef.terms.filter(t => t.v).map(t => `<tr><td class="w-40">${t.v}o</td><td>${base[t.v] || '---'}</td></tr>`).join('') : ''}
+                                    </table>
+                                </div>
+                                <div>
+                                    <table class="w-full">
+                                        <tr><td class="w-40 pb-1">เดือนส่งมอบงาน</td><td class="pb-1">${formatThaiDate(item.deliveryDate)}</td></tr>
+                                        ${formulaDef ? formulaDef.terms.filter(t => t.v).map(t => `<tr><td class="w-40">${t.v}t</td><td>${curr[t.v] || '---'}</td></tr>`).join('') : ''}
+                                    </table>
+                                </div>
+                            </div>
+
+                            <table class="w-full mb-6">
+                                <tr><td class="w-32 pb-1">เดือนส่งมอบงาน</td><td colspan="2" class="pb-1">${formatThaiDate(item.deliveryDate)}</td></tr>
+                    `;
+
+                    let step1Html = '';
+                    let step2Html = '';
+                    let finalK = 0;
+
+                    if (formulaDef) {
+                        formulaDef.terms.forEach(t => {
+                            if (!t.v) {
+                                finalK += t.c;
                             } else {
-                                const varName = term.v;
-                                const bVal = base[varName];
-                                const cVal = curr[varName];
-                                eqParts.push(`${term.c.toFixed(2)}(${varName}t/${varName}o)`);
+                                const bo = parseFloat(base[t.v]);
+                                const ct = parseFloat(curr[t.v]);
                                 
-                                if(bVal !== undefined && cVal !== undefined && parseFloat(bVal) > 0) {
-                                    const ratio = (parseFloat(cVal) / parseFloat(bVal)).toFixed(3);
-                                    valParts.push(`${term.c.toFixed(2)}(${ratio})`);
-                                    indicesUsed.push(`${varName}o = ${bVal}, ${varName}t = ${cVal}`);
-                                } else {
-                                    valParts.push(`${term.c.toFixed(2)}(- / -)`);
+                                if (bo > 0 && ct >= 0) {
+                                    // Step 1: Ratio (t/o)
+                                    const rawRatio = ct / bo;
+                                    const ratioTrunc3 = truncate3(rawRatio);
+                                    let ratioStr6 = rawRatio.toString();
+                                    if(ratioStr6.indexOf('.') !== -1) {
+                                        ratioStr6 = ratioStr6.split('.')[0] + '.' + ratioStr6.split('.')[1].padEnd(6, '0').substring(0,6);
+                                    } else {
+                                        ratioStr6 = ratioStr6 + '.000000';
+                                    }
+
+                                    step1Html += `<tr><td class="w-32">${t.v}t/${t.v}o</td><td class="w-40">= ${ratioStr6}</td><td>${ratioTrunc3.toFixed(3)}</td></tr>`;
+
+                                    // Step 2: Multiply
+                                    const rawMult = t.c * ratioTrunc3;
+                                    const multTrunc3 = truncate3(rawMult);
+                                    let multStr6 = rawMult.toString();
+                                    if(multStr6.indexOf('.') !== -1) {
+                                        multStr6 = multStr6.split('.')[0] + '.' + multStr6.split('.')[1].padEnd(6, '0').substring(0,6);
+                                    } else {
+                                        multStr6 = multStr6 + '.000000';
+                                    }
+
+                                    step2Html += `<tr><td class="w-32">${t.c.toFixed(2)} x ${t.v}t/${t.v}o</td><td class="w-40">= ${multStr6}</td><td>${multTrunc3.toFixed(3)}</td></tr>`;
+                                    
+                                    finalK += multTrunc3;
                                 }
                             }
                         });
-                        eqStr = eqParts.join(' + ');
-                        valStr = valParts.join(' + ');
                     }
 
+                    // ใส่ค่าที่คำนวณได้ลงใน HTML
+                    html += step1Html;
+                    html += `<tr><td colspan="3" class="py-2"></td></tr>`; // เว้นบรรทัด
+                    html += step2Html;
+                    html += `</table>`;
+
+                    // คำนวณส่วนต่าง (Delta) และข้อความ
+                    finalK = truncate3(finalK); // บังคับ 3 ตำแหน่งเผื่อไว้
+                    let delta = 0;
+                    let actionText = '';
+                    
+                    if (finalK > upperRule) {
+                        delta = truncate3(finalK - upperRule);
+                        actionText = `Escalation Factor ที่หักด้วย ${rulePercent} เมื่อต้องเพิ่มค่างาน`;
+                    } else if (finalK < lowerRule) {
+                        delta = truncate3(lowerRule - finalK);
+                        actionText = `Escalation Factor ที่หักด้วย ${rulePercent} เมื่อต้องเรียกเงินคืน`;
+                    } else {
+                        actionText = `Escalation Factor อยู่ในเกณฑ์ที่ไม่ต้องเพิ่มหรือเรียกเงินคืน`;
+                    }
+
+                    const finalCompensation = poVal * delta;
+
                     html += `
-                        <div class="border-2 border-slate-300 p-5 rounded-xl break-inside-avoid shadow-sm bg-white">
-                            <h3 class="font-bold text-lg mb-3 pb-2 border-b-2 border-slate-200 text-slate-800">
-                                งวดที่ ${item.period || '-'} : ${item.name || 'ไม่ได้ระบุชื่อรายการ'}
-                            </h3>
-                            
-                            <div class="grid grid-cols-2 gap-y-3 gap-x-4 text-sm mb-5">
-                                <div><span class="text-slate-500">สูตร K ที่ใช้:</span> <strong>${formulaDef ? formulaDef.name : item.formula}</strong></div>
-                                <div><span class="text-slate-500">เกณฑ์การหักลบ:</span> <strong>หัก ${item.rule}%</strong></div>
-                                <div><span class="text-slate-500">วันที่เดือนฐาน (o):</span> <strong>${item.baseDate || 'ไม่ได้ระบุ'}</strong></div>
-                                <div><span class="text-slate-500">วันที่ส่งงาน (t):</span> <strong>${item.deliveryDate || 'ไม่ได้ระบุ'}</strong></div>
-                                <div><span class="text-slate-500">ค่างานส่งมอบ (Po):</span> <strong>${formatNum(poVal)} บาท</strong></div>
-                                <div><span class="text-slate-500">ค่า K สุทธิที่ใช้:</span> <span class="font-black text-blue-600 underline text-base">${finalK.toFixed(3)}</span></div>
-                            </div>
+                            <table class="w-full mb-8">
+                                <tr><td class="w-32">K${item.formula.replace('K','')}</td><td colspan="2" class="font-bold">= ${finalK.toFixed(3)}</td></tr>
+                                <tr><td class="w-32">สูตร</td><td colspan="2">= (Po) x (K)</td></tr>
+                                <tr><td class="w-32 align-top">K</td><td class="w-80 underline decoration-blue-600 underline-offset-4 text-blue-800">= ${actionText}</td><td></td></tr>
+                                <tr><td class="w-32"></td><td colspan="2" class="font-bold text-base">= ${delta.toFixed(3)}</td></tr>
+                            </table>
 
-                            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-4 text-sm">
-                                <p class="font-bold text-slate-700 mb-1">สมการค่า K (รายละเอียดการแทนค่า):</p>
-                                <p class="font-mono text-xs mb-2 bg-white p-2 rounded border border-slate-200 text-slate-600">สูตร: K = ${eqStr}</p>
-                                <p class="font-mono text-xs mb-2 text-slate-500">[ ดัชนีที่ใช้: ${indicesUsed.length > 0 ? indicesUsed.join(' | ') : 'ไม่ได้ระบุดัชนีในระบบ'} ]</p>
-                                <p class="font-mono text-sm bg-white p-2 rounded border border-slate-200 text-slate-800">แทนค่า: K = ${valStr} = <strong class="text-emerald-600">${finalK.toFixed(3)}</strong></p>
-                            </div>
+                            <table class="w-full mb-8">
+                                <tr><td class="w-32">Po</td><td class="w-64 underline decoration-blue-600 underline-offset-4 text-blue-800">= ราคาค่างานงวด</td><td class="font-bold">= ${formatNum(poVal)} บาท</td></tr>
+                                <tr><td class="w-32"></td><td class="w-64">ค่างานที่ไม่อยู่ในข่าย</td><td class="font-bold">= 0 บาท</td></tr>
+                                <tr><td class="w-32"></td><td class="w-64">เหลือค่างานที่ได้รับพิจารณา</td><td class="font-bold">= ${formatNum(poVal)} บาท</td></tr>
+                            </table>
 
-                            <div class="bg-slate-100 p-4 rounded-lg text-sm flex justify-between items-center border border-slate-200">
-                                <span class="font-bold text-slate-700">ผลการคำนวณเงินชดเชย 
-                                    ( ${res.type === 'INCREASE' ? 'ขอเงินเพิ่ม' : res.type === 'DECREASE' ? 'เรียกเงินคืน' : 'ไม่มีการชดเชย'} ) :
-                                </span>
-                                <span class="font-black text-xl ${res.type === 'INCREASE' ? 'text-emerald-600' : res.type === 'DECREASE' ? 'text-rose-600' : 'text-slate-500'}">
-                                    ${res.type === 'DECREASE' ? '-' : ''}${formatNum(Math.abs(res.amount))} บาท
-                                </span>
-                            </div>
+                            <table class="w-full">
+                                <tr><td class="w-48 font-bold">เงินชดเชยที่คำนวณได้</td><td class="font-bold text-lg">= ${formatNum(finalCompensation)} บาท</td></tr>
+                            </table>
                         </div>
                     `;
-                });
-
-                const netTotal = incTot - decTot;
-                
-                html += `
-                    </div>
-                    <div class="mt-8 border-t-4 border-slate-800 pt-6 flex justify-end break-inside-avoid">
-                        <div class="w-1/2 bg-slate-50 p-6 rounded-xl border-2 border-slate-300">
-                            <h4 class="font-bold text-lg mb-4 text-slate-800 border-b border-slate-200 pb-2">สรุปยอดรวมทั้งโครงการ</h4>
-                            <div class="space-y-2 text-sm">
-                                <div class="flex justify-between"><span class="text-slate-600">รวมค่างาน (Po):</span> <strong>${formatNum(poTot)} บาท</strong></div>
-                                <div class="flex justify-between"><span class="text-slate-600">รวมยอดขอเงินเพิ่ม (+):</span> <strong class="text-emerald-600">${formatNum(incTot)} บาท</strong></div>
-                                <div class="flex justify-between"><span class="text-slate-600">รวมยอดเรียกเงินคืน (-):</span> <strong class="text-rose-600">${formatNum(decTot)} บาท</strong></div>
-                                <div class="flex justify-between border-t border-slate-200 pt-3 mt-3 items-center">
-                                    <span class="font-bold text-slate-800 text-base">ยอดเงินชดเชยสุทธิ:</span> 
-                                    <strong class="text-2xl ${netTotal > 0 ? 'text-emerald-600' : netTotal < 0 ? 'text-rose-600' : 'text-slate-800'}">
-                                        ${netTotal < 0 ? '-' : ''}${formatNum(Math.abs(netTotal))} บาท
-                                    </strong>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                }); // จบ Loop หน้า A4
 
                 printArea.innerHTML = html;
                 
@@ -1412,6 +1542,190 @@
             document.getElementById('printArea').classList.add('hidden');
             document.getElementById('app').classList.remove('hidden');
             window.scrollTo(0, 0);
+        }
+
+        function exportToExcel() {
+            if (typeof XLSX === 'undefined') {
+                showToast("ไม่พบไลบรารีสำหรับสร้าง Excel", "error");
+                return;
+            }
+            showToast("กำลังสร้างไฟล์ Excel แบบฟอร์มที่ 2...", "info");
+
+            const projectName = document.getElementById('saveProjectNameInput') ? document.getElementById('saveProjectNameInput').value : (currentLoadedProjectId || '---');
+            const rulePercent = currentGlobalRule === '4' ? '4%' : '2%';
+            
+            // ฟังก์ชันช่วยจัดวันที่
+            const formatThaiDateStr = (dateString) => {
+                if (!dateString) return '';
+                const d = new Date(dateString);
+                if (isNaN(d.getTime())) return dateString;
+                const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+                return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
+            };
+
+            // ดึงข้อมูลพื้นฐานจากรายการแรกและรายการสุดท้าย
+            const firstItem = items[0] || {};
+            const lastItem = items[items.length - 1] || {};
+            const prjName = firstItem.name || '---';
+            const baseDateTxt = formatThaiDateStr(firstItem.baseDate);
+            const lastDeliveryTxt = formatThaiDateStr(lastItem.deliveryDate);
+            
+            let totalContractValue = 0;
+            items.forEach(i => totalContractValue += (parseFloat((i.po||'0').toString().replace(/,/g, '')) || 0));
+
+            // สร้างโครงสร้างข้อมูล (Array of Arrays) ตามแบบฟอร์มเป๊ะๆ
+            const ws_data = [
+                ["แบบฟอร์มที่ 2 การคำนวณเงินชดเชยเพิ่มเติมค่างานก่อสร้างตามสัญญาแบบปรับราคาได้ (ค่า K)", "", "", "", "", "", "", "", ""],
+                ["กระทรวง", "กระทรวงมหาดไทย", "", "ชื่อโครงการ", prjName, "", "วันที่ส่งงานงวดสุด", lastDeliveryTxt, ""],
+                ["กรม", "กรมส่งเสริมการปกครองท้องถิ่น", "", "วันที่เปิดซองประกวดราคา", baseDateTxt, "", "วันที่ครบ 90 วันหลัง", "", ""],
+                ["สัญญาเลขที่", projectName, "", "ค่างานทั้งสัญญา", totalContractValue, "", "วันที่ผู้รับจ้างขอเงิน", lastDeliveryTxt, ""],
+                ["ผู้รับจ้าง", "---", "", "สัญญาเริ่ม", "", "", "สัญญาสิ้นสุด", "", ""],
+                ["", "", "", "", "", "", "", "", ""],
+                ["งวด", "วันที่", "ค่างานทั้งหมด", "ไม่อยู่ในข่าย", "ได้รับพิจารณา", "สูตร K", "ค่า K", `หัก ${rulePercent} ชดเชย`, "เงินชดเชยที่คำนวณได้"]
+            ];
+
+            let sumTotalPo = 0;
+            let sumConsideredPo = 0;
+            let sumCompensation = 0;
+
+            // วนลูปข้อมูลตาราง
+            items.forEach(item => {
+                const poVal = parseFloat((item.po||'0').toString().replace(/,/g, '')) || 0;
+                const kVal = parseFloat(item.kValue) || 0;
+                const upperRule = item.rule === '4' ? 1.040 : 1.020;
+                const lowerRule = item.rule === '4' ? 0.960 : 0.980;
+
+                let multiplier = 0;
+                let compensation = 0;
+
+                if (kVal > upperRule) {
+                    multiplier = truncate3(kVal - upperRule);
+                    compensation = truncate3(poVal * multiplier);
+                } else if (kVal < lowerRule) {
+                    multiplier = truncate3(lowerRule - kVal);
+                    compensation = truncate3(poVal * multiplier) * -1; 
+                }
+
+                sumTotalPo += poVal;
+                sumConsideredPo += poVal;
+                sumCompensation += compensation;
+
+                ws_data.push([
+                    item.period || 'NaN',
+                    formatThaiDateStr(item.deliveryDate),
+                    poVal,
+                    0, 
+                    poVal,
+                    item.formula,
+                    kVal > 0 ? kVal.toFixed(3) : '',
+                    multiplier > 0 ? multiplier.toFixed(3) : '',
+                    compensation !== 0 ? compensation : ''
+                ]);
+            });
+
+            // แถวผลรวม
+            ws_data.push(["", "ยอดรวมทั้งสิ้น", sumTotalPo, 0, sumConsideredPo, "", "", "", sumCompensation]);
+            ws_data.push(["", "", "", "", "", "", "", "", ""]);
+            
+            // หมายเหตุด้านล่าง
+            ws_data.push(["* หมายถึงค่า K ของเดือนสิ้นสุดสัญญา ซึ่งที่มีค่าน้อยกว่าค่า K ของเดือนส่งงานงวดนั้นๆ โดยจะมีการเปรียบเทียบก็ต่อเมื่อวันส่งงานของงวดนั้นๆ ช้ากว่าวันสิ้นสุดสัญญา", "", "", "", "", "", "", "", ""]);
+
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+            // ---------------------------------------------
+            // อัปเดต: เพิ่มการจัดรูปแบบตารางและฟอนต์ TH Sarabun PSK
+            // ---------------------------------------------
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            for(let R = range.s.r; R <= range.e.r; ++R) {
+                for(let C = range.s.c; C <= range.e.c; ++C) {
+                    const cell_address = {c:C, r:R};
+                    const cell_ref = XLSX.utils.encode_cell(cell_address);
+                    if(!ws[cell_ref]) continue;
+
+                    // สไตล์พื้นฐาน: ฟอนต์ TH Sarabun PSK ขนาด 16, จัดกึ่งกลางแนวตั้ง
+                    let style = {
+                        font: { name: "TH Sarabun PSK", sz: 16, color: { rgb: "000000" } },
+                        alignment: { vertical: "center", horizontal: "left" }
+                    };
+
+                    // จัดสไตล์ส่วนหัวเอกสาร (บรรทัดที่ 1)
+                    if (R === 0) {
+                        style.font.bold = true;
+                        style.font.sz = 18;
+                        style.alignment.horizontal = "center";
+                    }
+
+                    // จัดการตัวเลขให้แสดงคอมม่า (Comma)
+                    if (typeof ws[cell_ref].v === 'number') {
+                        style.numFmt = "#,##0.00";
+                    }
+
+                    // สร้างเส้นตาราง (Borders) ตั้งแต่บรรทัดที่ 6 เป็นต้นไป (บรรทัดหัวตาราง) ถึงบรรทัดยอดรวม
+                    const totalRowIndex = ws_data.length - 3;
+                    if (R >= 6 && R <= totalRowIndex) {
+                        style.border = {
+                            top: { style: "thin", color: { auto: 1 } },
+                            bottom: { style: "thin", color: { auto: 1 } },
+                            left: { style: "thin", color: { auto: 1 } },
+                            right: { style: "thin", color: { auto: 1 } }
+                        };
+                        
+                        // จัดกึ่งกลางสำหรับคอลัมน์ งวด, วันที่, สูตร K, ค่า K, หัก %
+                        if (R === 6 || C === 0 || C === 1 || C === 5 || C === 6 || C === 7) {
+                            style.alignment.horizontal = "center";
+                        }
+                        
+                        // ทำให้หัวตารางและแถวรวมเป็นตัวหนา
+                        if (R === 6 || R === totalRowIndex) {
+                            style.font.bold = true;
+                        }
+                    }
+
+                    // สีแดงสำหรับหมายเหตุด้านล่างสุด
+                    if (R === ws_data.length - 1) {
+                        style.font.color = { rgb: "FF0000" };
+                    }
+
+                    ws[cell_ref].s = style;
+                }
+            }
+
+            // จัดการผสานเซลล์ (Merge Cells)
+            ws['!merges'] = [
+                { s: { r: 0, c: 0 }, e: { r: 0, c: 8 } }, // Title
+                { s: { r: 1, c: 1 }, e: { r: 1, c: 2 } }, // กระทรวง
+                { s: { r: 2, c: 1 }, e: { r: 2, c: 2 } }, // กรม
+                { s: { r: 3, c: 1 }, e: { r: 3, c: 2 } }, // สัญญา
+                { s: { r: 4, c: 1 }, e: { r: 4, c: 2 } }, // ผู้รับจ้าง
+                { s: { r: 1, c: 4 }, e: { r: 1, c: 5 } }, // ชื่อโครงการ
+                { s: { r: 2, c: 4 }, e: { r: 2, c: 5 } }, // วันที่เปิดซอง
+                { s: { r: 3, c: 4 }, e: { r: 3, c: 5 } }, // ค่างานทั้งสัญญา
+                { s: { r: 4, c: 4 }, e: { r: 4, c: 5 } }, // สัญญาเริ่ม
+                { s: { r: 1, c: 7 }, e: { r: 1, c: 8 } }, // วันที่ส่งงาน
+                { s: { r: 2, c: 7 }, e: { r: 2, c: 8 } }, // ครบ 90 วัน
+                { s: { r: 3, c: 7 }, e: { r: 3, c: 8 } }, // ผู้รับจ้างขอเงิน
+                { s: { r: 4, c: 7 }, e: { r: 4, c: 8 } }, // สัญญาสิ้นสุด
+                { s: { r: ws_data.length - 1, c: 0 }, e: { r: ws_data.length - 1, c: 8 } } // หมายเหตุท้ายตาราง
+            ];
+
+            // ตั้งค่าความกว้างคอลัมน์ให้พอดี
+            ws['!cols'] = [
+                {wch: 8},  // A งวด
+                {wch: 16}, // B วันที่
+                {wch: 16}, // C ค่างานทั้งหมด
+                {wch: 16}, // D ไม่อยู่ในข่าย
+                {wch: 16}, // E ได้รับพิจารณา
+                {wch: 10}, // F สูตร K
+                {wch: 10}, // G ค่า K
+                {wch: 12}, // H หัก X% ชดเชย
+                {wch: 18}  // I เงินชดเชยที่คำนวณได้
+            ];
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "แบบฟอร์มค่า K");
+
+            // บันทึกไฟล์ดาวน์โหลด
+            XLSX.writeFile(wb, `K_Factor_Form2_${projectName === '---' ? 'Report' : projectName}.xlsx`);
         }
 
         // Initialize First Render
