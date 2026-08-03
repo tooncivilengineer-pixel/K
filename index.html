@@ -243,6 +243,30 @@
                     </div>
                     <input type="date" id="info_requestDate" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500">
                 </div>
+                
+                <!-- เพิ่มช่องผู้คำนวณ -->
+                <div class="md:col-span-2 mt-4 pt-5 border-t border-slate-200">
+                    <h4 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        ผู้คำนวณ (สำหรับแสดงในหน้าพิมพ์รายงาน)
+                    </h4>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">ชื่อ-นามสกุล ผู้คำนวณ</label>
+                            <input type="text" id="info_calculatorName" placeholder="เช่น นายสมชาย ใจดี" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">ตำแหน่ง</label>
+                            <select id="info_calculatorPos" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 outline-none bg-white">
+                                <option value="นายช่างโยธาชำนาญงาน">นายช่างโยธาชำนาญงาน</option>
+                                <option value="วิศวกรโยธาปฏิบัติการ">วิศวกรโยธาปฏิบัติการ</option>
+                                <option value="วิศวกรโยธาชำนาญการพิเศษ">วิศวกรโยธาชำนาญการพิเศษ</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
             </div>
             <div class="bg-white px-6 py-4 flex justify-end gap-3 border-t border-slate-200">
                 <button onclick="closeProjectInfoModal()" class="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">ยกเลิก</button>
@@ -295,6 +319,85 @@
                 <ul id="projectsList" class="divide-y divide-slate-200">
                     <!-- Project Items injected here -->
                 </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal เปลี่ยนชื่อโครงการ -->
+    <div id="editCloudModal" class="hidden fixed inset-0 z-[80] items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeEditCloudModal()"></div>
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl z-10 overflow-hidden transform transition-all flex flex-col max-h-[90vh]">
+            <div class="bg-amber-500 px-6 py-4 flex justify-between items-center shrink-0">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <svg class="w-5 h-5 text-amber-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    แก้ไขข้อมูลโครงการที่บันทึกไว้
+                </h3>
+                <button onclick="closeEditCloudModal()" class="text-amber-200 hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            </div>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 overflow-y-auto custom-scrollbar">
+                
+                <div class="md:col-span-2 bg-blue-50 p-4 rounded-xl border border-blue-200 mb-2">
+                    <label class="block text-sm font-bold text-blue-800 mb-1">ชื่อไฟล์บันทึกบนระบบ (เปลี่ยนชื่อไฟล์ได้)</label>
+                    <input type="hidden" id="editCloud_oldDocId">
+                    <input type="text" id="editCloud_docId" class="w-full px-3 py-2 border border-blue-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-bold text-blue-900 shadow-sm">
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-bold text-slate-700 mb-1">ชื่อโครงการ</label>
+                    <input type="text" id="editCloud_name" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">ประเภทงานก่อสร้าง</label>
+                    <input type="text" id="editCloud_type" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">ผู้รับจ้าง</label>
+                    <input type="text" id="editCloud_contractor" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">สัญญาจ้างเลขที่</label>
+                    <input type="text" id="editCloud_contractNo" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">ลงวันที่ (เริ่มสัญญา)</label>
+                    <input type="date" id="editCloud_date" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-bold text-slate-700 mb-1">ค่างานตามสัญญาทั้งหมด (บาท)</label>
+                    <input type="text" id="editCloud_contractValue" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500 font-bold text-blue-700">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-bold text-slate-700 mb-1">วันที่ผู้รับจ้างขอเงินชดเชย</label>
+                    <input type="date" id="editCloud_requestDate" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                
+                <div class="md:col-span-2 mt-2 pt-4 border-t border-slate-200">
+                    <h4 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        ผู้คำนวณ
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-2 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">ชื่อ-นามสกุล ผู้คำนวณ</label>
+                            <input type="text" id="editCloud_calculatorName" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">ตำแหน่ง</label>
+                            <select id="editCloud_calculatorPos" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 outline-none bg-white">
+                                <option value="นายช่างโยธาชำนาญงาน">นายช่างโยธาชำนาญงาน</option>
+                                <option value="วิศวกรโยธาปฏิบัติการ">วิศวกรโยธาปฏิบัติการ</option>
+                                <option value="วิศวกรโยธาชำนาญการพิเศษ">วิศวกรโยธาชำนาญการพิเศษ</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="bg-white px-6 py-4 flex justify-end gap-3 border-t border-slate-200 shrink-0">
+                <button onclick="closeEditCloudModal()" class="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">ยกเลิก</button>
+                <button id="saveEditCloudBtn" onclick="saveEditCloudProject()" class="px-5 py-2.5 rounded-lg text-sm font-bold bg-amber-500 text-white hover:bg-amber-600 shadow-md transition-all">
+                    บันทึกการแก้ไข
+                </button>
             </div>
         </div>
     </div>
@@ -543,7 +646,10 @@
             { id: 3, period: '1', name: 'งานผิวจราจร AC', formula: 'K3.3', baseDate: '', deliveryDate: '', po: '', kValue: '', rule: '2', indices: { base: {}, curr: {} } }
         ];
 
-        let projectInfo = { name: '', type: '', contractNo: '', date: '', contractor: '', contractValue: '', requestDate: '' };
+        let projectInfo = { 
+            name: '', type: '', contractNo: '', date: '', contractor: '', contractValue: '', requestDate: '',
+            calculatorName: '', calculatorPos: 'นายช่างโยธาชำนาญงาน'
+        };
         let currentGlobalRule = '2';
         let activeModalItemId = null;
         let currentLoadedProjectId = null; 
@@ -944,6 +1050,10 @@
             document.getElementById('info_contractor').value = projectInfo.contractor || '';
             document.getElementById('info_contractValue').value = projectInfo.contractValue || '';
             
+            // โหลดข้อมูลผู้คำนวณ
+            document.getElementById('info_calculatorName').value = projectInfo.calculatorName || '';
+            document.getElementById('info_calculatorPos').value = projectInfo.calculatorPos || 'นายช่างโยธาชำนาญงาน';
+            
             let reqDate = projectInfo.requestDate || '';
             if (!reqDate) {
                 const latestDate = getLatestDeliveryDate();
@@ -971,7 +1081,11 @@
                 date: document.getElementById('info_date').value,
                 contractor: document.getElementById('info_contractor').value,
                 contractValue: document.getElementById('info_contractValue').value,
-                requestDate: document.getElementById('info_requestDate').value
+                requestDate: document.getElementById('info_requestDate').value,
+                
+                // บันทึกผู้คำนวณ
+                calculatorName: document.getElementById('info_calculatorName').value,
+                calculatorPos: document.getElementById('info_calculatorPos').value
             };
             closeProjectInfoModal();
             showToast('บันทึกข้อมูลโครงการเรียบร้อยแล้ว', 'success');
@@ -1186,7 +1300,7 @@
                     // ป้องกันปัญหากรณีมีเครื่องหมายอัญประกาศในชื่อไฟล์
                     li.querySelector('.projectNameDisplay').textContent = data.projectName;
                     li.querySelector('.load-btn').onclick = () => loadSpecificProject(doc.id);
-                    li.querySelector('.rename-btn').onclick = (e) => { e.stopPropagation(); renameProject(doc.id); };
+                    li.querySelector('.rename-btn').onclick = (e) => { e.stopPropagation(); openEditCloudModal(doc.id); };
                     li.querySelector('.delete-btn').onclick = (e) => { e.stopPropagation(); deleteProject(doc.id, e.currentTarget); };
 
                     listEl.appendChild(li);
@@ -1203,45 +1317,109 @@
             document.getElementById('loadModal').classList.remove('flex');
         }
 
-        async function renameProject(docId) {
-            const newName = prompt(`เปลี่ยนชื่อโครงการจาก:\n"${docId}"\n\nเป็นชื่อใหม่:`, docId);
-            if (!newName || newName.trim() === "" || newName.trim() === docId) return;
+        async function openEditCloudModal(docId) {
+            showToast('กำลังโหลดข้อมูลโครงการ...', 'info');
+            try {
+                const doc = await db.collection(COLLECTION_NAME).doc(docId).get();
+                if (doc.exists) {
+                    const data = doc.data();
+                    const info = data.projectInfo || {};
+                    
+                    document.getElementById('editCloud_oldDocId').value = docId;
+                    document.getElementById('editCloud_docId').value = docId; 
+                    
+                    document.getElementById('editCloud_name').value = info.name || '';
+                    document.getElementById('editCloud_type').value = info.type || '';
+                    document.getElementById('editCloud_contractor').value = info.contractor || '';
+                    document.getElementById('editCloud_contractNo').value = info.contractNo || '';
+                    document.getElementById('editCloud_date').value = info.date || '';
+                    document.getElementById('editCloud_contractValue').value = info.contractValue || '';
+                    document.getElementById('editCloud_requestDate').value = info.requestDate || '';
+                    document.getElementById('editCloud_calculatorName').value = info.calculatorName || '';
+                    document.getElementById('editCloud_calculatorPos').value = info.calculatorPos || 'นายช่างโยธาชำนาญงาน';
+                    
+                    closeLoadModal();
+                    document.getElementById('editCloudModal').classList.remove('hidden');
+                    document.getElementById('editCloudModal').classList.add('flex');
+                }
+            } catch (error) {
+                console.error(error);
+                showToast('ดึงข้อมูลผิดพลาด กรุณาลองใหม่', 'error');
+            }
+        }
+
+        function closeEditCloudModal() {
+            document.getElementById('editCloudModal').classList.add('hidden');
+            document.getElementById('editCloudModal').classList.remove('flex');
+            openLoadModal(); // เปิดหน้าต่างรายชื่อไฟล์กลับมาเหมือนเดิม
+        }
+
+        async function saveEditCloudProject() {
+            const oldDocId = document.getElementById('editCloud_oldDocId').value;
+            const newDocId = document.getElementById('editCloud_docId').value.trim();
             
-            const newDocId = newName.trim();
+            if (!newDocId) return showToast("กรุณาตั้งชื่อไฟล์โครงการ", "error");
+            
+            const btn = document.getElementById('saveEditCloudBtn');
+            const origText = btn.innerHTML;
+            btn.innerHTML = 'กำลังบันทึก...';
+            btn.disabled = true;
             
             try {
-                // เช็คว่ามีชื่อซ้ำหรือไม่
-                const existingDoc = await db.collection(COLLECTION_NAME).doc(newDocId).get();
-                if (existingDoc.exists) {
-                    showToast('ชื่อนี้มีอยู่แล้วในระบบ กรุณาใช้ชื่ออื่น', 'error');
-                    return;
+                if (newDocId !== oldDocId) {
+                    const existingDoc = await db.collection(COLLECTION_NAME).doc(newDocId).get();
+                    if (existingDoc.exists) {
+                        showToast('ชื่อไฟล์นี้มีอยู่แล้ว กรุณาใช้ชื่ออื่น', 'error');
+                        btn.innerHTML = origText;
+                        btn.disabled = false;
+                        return;
+                    }
                 }
                 
-                showToast('กำลังบันทึกชื่อใหม่...', 'info');
-                
-                // คัดลอกข้อมูลไปไฟล์ใหม่
-                const oldDoc = await db.collection(COLLECTION_NAME).doc(docId).get();
+                const oldDoc = await db.collection(COLLECTION_NAME).doc(oldDocId).get();
                 const data = oldDoc.data();
-                data.projectName = newDocId; 
+                
+                data.projectName = newDocId;
+                data.projectInfo = {
+                    name: document.getElementById('editCloud_name').value,
+                    type: document.getElementById('editCloud_type').value,
+                    contractor: document.getElementById('editCloud_contractor').value,
+                    contractNo: document.getElementById('editCloud_contractNo').value,
+                    date: document.getElementById('editCloud_date').value,
+                    contractValue: document.getElementById('editCloud_contractValue').value,
+                    requestDate: document.getElementById('editCloud_requestDate').value,
+                    calculatorName: document.getElementById('editCloud_calculatorName').value,
+                    calculatorPos: document.getElementById('editCloud_calculatorPos').value
+                };
                 data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
                 
                 await db.collection(COLLECTION_NAME).doc(newDocId).set(data);
                 
-                // ลบไฟล์เก่า
-                await db.collection(COLLECTION_NAME).doc(docId).delete();
-                
-                // อัปเดตป้ายกำกับถ้าเปิดไฟล์นี้อยู่
-                if (currentLoadedProjectId === docId) {
-                    currentLoadedProjectId = newDocId;
-                    const badge = document.getElementById('currentProjectBadge');
-                    badge.textContent = `ไฟล์: ${currentLoadedProjectId}`;
+                if (newDocId !== oldDocId) {
+                    await db.collection(COLLECTION_NAME).doc(oldDocId).delete();
+                    // อัปเดตป้ายชื่อไฟล์ด้านบน ถ้ากำลังแก้ไขไฟล์ที่เปิดค้างไว้อยู่
+                    if (currentLoadedProjectId === oldDocId) {
+                        currentLoadedProjectId = newDocId;
+                        document.getElementById('currentProjectBadge').textContent = `ไฟล์: ${currentLoadedProjectId}`;
+                    }
                 }
                 
-                showToast('เปลี่ยนชื่อสำเร็จ', 'success');
-                openLoadModal(); // โหลดรายการใหม่
-            } catch(error) {
+                // ซิงค์ข้อมูลเข้าตารางหลัก หากกำลังแก้ไฟล์เดียวกันอยู่
+                if (currentLoadedProjectId === newDocId || currentLoadedProjectId === oldDocId) {
+                    projectInfo = data.projectInfo;
+                }
+
+                showToast('บันทึกการแก้ไขสำเร็จ', 'success');
+                closeEditCloudModal(); 
+                
+            } catch (error) {
                 console.error(error);
-                showToast('เกิดข้อผิดพลาดในการเปลี่ยนชื่อ', 'error');
+                showToast('เกิดข้อผิดพลาดในการบันทึก', 'error');
+            } finally {
+                if(btn) {
+                    btn.innerHTML = origText;
+                    btn.disabled = false;
+                }
             }
         }
 
@@ -1290,6 +1468,7 @@
                 if (doc.exists) {
                     const data = doc.data();
                     items = data.items || [];
+                    // อัปเดตให้รองรับ field ผู้คำนวณ หากดึงมาจากไฟล์เก่าให้ตั้งค่า default
                     projectInfo = data.projectInfo || { name: '', type: '', contractNo: '', date: '', contractor: '', contractValue: '', requestDate: '' };
                     currentGlobalRule = data.globalRule || '2';
                     currentLoadedProjectId = docId;
@@ -1682,22 +1861,22 @@
                         
                         <div class="grid grid-cols-3 gap-x-4 gap-y-1 mb-6 leading-relaxed">
                             <div>
-                                <div class="flex"><span class="w-24 font-bold">กระทรวง</span><span>กระทรวงมหาดไทย</span></div>
-                                <div class="flex"><span class="w-24 font-bold">กรม</span><span>กรมส่งเสริมการปกครองท้องถิ่น</span></div>
-                                <div class="flex"><span class="w-24 font-bold">สัญญาเลขที่</span><span>${projectInfo.contractNo || "---"}</span></div>
-                                <div class="flex"><span class="w-24 font-bold">ผู้รับจ้าง</span><span>${projectInfo.contractor || "---"}</span></div>
+                                <div class="flex items-start"><span class="w-24 font-bold shrink-0">กระทรวง</span><span class="flex-1">กระทรวงมหาดไทย</span></div>
+                                <div class="flex items-start"><span class="w-24 font-bold shrink-0">กรม</span><span class="flex-1">กรมส่งเสริมการปกครองท้องถิ่น</span></div>
+                                <div class="flex items-start"><span class="w-24 font-bold shrink-0">สัญญาเลขที่</span><span class="flex-1">${projectInfo.contractNo || "---"}</span></div>
+                                <div class="flex items-start"><span class="w-24 font-bold shrink-0">ผู้รับจ้าง</span><span class="flex-1">${projectInfo.contractor || "---"}</span></div>
                             </div>
                             <div>
-                                <div class="flex"><span class="w-36 font-bold">ชื่อโครงการ</span><span class="flex-1 truncate">${projectInfo.name || firstItem.name || "---"}</span></div>
-                                <div class="flex"><span class="w-36 font-bold">วันที่เปิดซองประกวดราคา</span><span>${baseDateTxt}</span></div>
-                                <div class="flex"><span class="w-36 font-bold">ค่างานทั้งสัญญา</span><span>${formatNum(finalContractValue > 0 ? finalContractValue : sumTotalPo)}</span></div>
-                                <div class="flex"><span class="w-36 font-bold">สัญญาเริ่ม</span><span>${formatThaiDate(projectInfo.date) || "---"}</span></div>
+                                <div class="flex items-start"><span class="w-36 font-bold shrink-0">ชื่อโครงการ</span><span class="flex-1">${projectInfo.name || firstItem.name || "---"}</span></div>
+                                <div class="flex items-start"><span class="w-36 font-bold shrink-0">วันที่เปิดซองประกวดราคา</span><span class="flex-1">${baseDateTxt}</span></div>
+                                <div class="flex items-start"><span class="w-36 font-bold shrink-0">ค่างานทั้งสัญญา</span><span class="flex-1">${formatNum(finalContractValue > 0 ? finalContractValue : sumTotalPo)}</span></div>
+                                <div class="flex items-start"><span class="w-36 font-bold shrink-0">สัญญาเริ่ม</span><span class="flex-1">${formatThaiDate(projectInfo.date) || "---"}</span></div>
                             </div>
                             <div>
-                                <div class="flex"><span class="w-40 font-bold">วันที่ส่งงานงวดสุด</span><span>${lastDeliveryTxt}</span></div>
-                                <div class="flex"><span class="w-40 font-bold">วันที่ครบ 90 วันหลัง</span><span>${date90DaysTxt}</span></div>
-                                <div class="flex"><span class="w-40 font-bold">วันที่ผู้รับจ้างขอเงิน</span><span>${reqDateTxt}</span></div>
-                                <div class="flex"><span class="w-40 font-bold">สัญญาสิ้นสุด</span><span>---</span></div>
+                                <div class="flex items-start"><span class="w-40 font-bold shrink-0">วันที่ส่งงานงวดสุด</span><span class="flex-1">${lastDeliveryTxt}</span></div>
+                                <div class="flex items-start"><span class="w-40 font-bold shrink-0">วันที่ครบ 90 วันหลัง</span><span class="flex-1">${date90DaysTxt}</span></div>
+                                <div class="flex items-start"><span class="w-40 font-bold shrink-0">วันที่ผู้รับจ้างขอเงิน</span><span class="flex-1">${reqDateTxt}</span></div>
+                                <div class="flex items-start"><span class="w-40 font-bold shrink-0">สัญญาสิ้นสุด</span><span class="flex-1">---</span></div>
                             </div>
                         </div>
 
@@ -1727,8 +1906,23 @@
                                 </tr>
                             </tbody>
                         </table>
-                        <div class="text-red-600 font-semibold text-sm mt-4">
+                        <div class="text-red-600 font-semibold text-sm mt-4 mb-16">
                             * หมายถึงค่า K ของเดือนสิ้นสุดสัญญา ซึ่งที่มีค่าน้อยกว่าค่า K ของเดือนส่งงานงวดนั้นๆ โดยจะมีการเปรียบเทียบก็ต่อเมื่อวันส่งงานของงวดนั้นๆ ช้ากว่าวันสิ้นสุดสัญญา
+                        </div>
+                        
+                        <!-- ช่องเซ็นชื่อผู้คำนวณ -->
+                        <div class="flex justify-end mt-16 pb-10 pr-12">
+                            <div class="text-left w-[360px]">
+                                <div class="mb-3 whitespace-nowrap">
+                                    (ลงชื่อ) ........................................................ ผู้คำนวณ
+                                </div>
+                                <div class="mb-2 text-center pr-12">
+                                    ( ${projectInfo.calculatorName ? projectInfo.calculatorName : '........................................................'} )
+                                </div>
+                                <div class="text-base text-center pr-12">
+                                    ตำแหน่ง ${projectInfo.calculatorPos || 'นายช่างโยธาชำนาญงาน'}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `;
