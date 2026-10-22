@@ -27,11 +27,46 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
+        .up-meta { width: 100%; border: 1px solid #cbd5e1; border-radius: .5rem; padding: .4rem .6rem; background: #fff8dc; outline: none; }
+        .up-meta:focus { border-color: #4f46e5; box-shadow: 0 0 0 2px #c7d2fe; }
+
+        /* แบบฟอร์ม Unit Price: ใช้หน้าตาตารางเดียวกันทั้งหน้าแสดงผลและหน้าพิมพ์ */
+        #printArea.unit-price-print { box-sizing: border-box; display: block; width: 100%; max-width: none !important; margin: 0 auto; padding: 18px !important; color: #111; background: #fff; }
+        #printArea.unit-price-print .up-sheet { width: 100%; font-family: Tahoma, Arial, sans-serif; font-size: 10px; line-height: 1.25; color: #111; }
+        #printArea.unit-price-print .up-header { display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 12px; margin: 0 0 10px; align-items: start; }
+        #printArea.unit-price-print .up-header-col { min-width: 0; }
+        #printArea.unit-price-print .up-header-row { display: grid; grid-template-columns: 106px minmax(0,1fr); gap: 4px; margin: 2px 0; align-items: start; }
+        #printArea.unit-price-print .up-header-row b { font-weight: 700; }
+        #printArea.unit-price-print .up-header-row span { overflow-wrap: anywhere; }
+        #printArea.unit-price-print .up-print-table { width: 100%; min-width: 1080px; table-layout: fixed; border-collapse: collapse; font-size: 9px; line-height: 1.15; }
+        #printArea.unit-price-print .up-print-table th,
+        #printArea.unit-price-print .up-print-table td { border: 1px solid #111; padding: 4px 3px; vertical-align: middle; text-align: center; overflow-wrap: anywhere; }
+        #printArea.unit-price-print .up-print-table thead th { font-weight: 700; }
+        #printArea.unit-price-print .up-print-table td.up-left { text-align: left; }
+        #printArea.unit-price-print .up-print-table td.up-number { text-align: right; white-space: nowrap; }
+        #printArea.unit-price-print .up-print-table tbody tr { height: 26px; }
+        #printArea.unit-price-print .up-signature { display: flex; justify-content: flex-end; margin: 10mm 15mm 0 0; }
+        #printArea.unit-price-print .up-signature > div { text-align: center; min-width: 70mm; line-height: 1.8; }
+
         @media print {
             body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             #app, #calcModal, #saveModal, #loadModal, #indexModal, #allIndicesModal, #toastContainer, #editCloudModal, #projectInfoModal, .no-print { display: none !important; }
             #printArea { display: block !important; }
-            @page { margin: 15mm; }
+            @page { margin: 10mm; }
+            #printArea { color: #111; }
+            #printArea table { border-collapse: collapse; }
+            #printArea tr { break-inside: avoid; page-break-inside: avoid; }
+            @page unitPrice { size: A4 landscape; margin: 8mm; }
+            #printArea.unit-price-print { page: unitPrice; max-width: none !important; width: 100%; padding: 0 !important; }
+            #printArea.unit-price-print .up-sheet { font-size: 8.5pt; }
+            #printArea.unit-price-print .up-header { grid-template-columns: 1.15fr 1fr 1fr; gap: 8mm; margin-bottom: 3mm; font-size: 8pt; }
+            #printArea.unit-price-print .up-header-row { grid-template-columns: 28mm minmax(0,1fr); gap: 1mm; margin: 1mm 0; }
+            #printArea.unit-price-print .up-print-table { min-width: 0; font-size: 7pt; line-height: 1.1; }
+            #printArea.unit-price-print .up-print-table th, #printArea.unit-price-print .up-print-table td { padding: 2.2px 2px; }
+            #printArea.unit-price-print .up-print-table tbody tr { height: 7mm; }
+            #printArea.unit-price-print .up-print-table thead { display: table-header-group; }
+            #printArea.unit-price-print .up-print-table tfoot { display: table-footer-group; }
+            #printArea.unit-price-print .up-signature { margin-top: 6mm; }
         }
     </style>
 </head>
@@ -70,6 +105,11 @@
                         จัดการดัชนี
                     </button>
 
+                    <button onclick="openUnitPriceModal()" class="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition-colors border border-emerald-500">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3M4 11h16M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1zm3 10h3m3 0h3"/></svg>
+                        แบบฟอร์ม Unit Price
+                    </button>
+
                     <!-- Cloud Actions -->
                     <div class="flex bg-slate-700/50 p-1.5 rounded-lg border border-slate-600/50">
                         <button onclick="openLoadModal()" class="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-semibold text-slate-200 hover:bg-slate-600 hover:text-white transition-colors">
@@ -83,12 +123,8 @@
                         </button>
                     </div>
 
-                    <!-- Global Rule Selector (3 ปุ่ม) -->
-                    <div class="bg-slate-700 p-2 rounded-lg flex items-center gap-2 border border-slate-600 shadow-inner">
-                        <span class="text-sm font-medium text-slate-300 mr-1 hidden sm:inline">เกณฑ์:</span>
-                        <button id="rule2AfterBtn" onclick="applyGlobalRule('2_after')" class="px-3 py-1.5 rounded-md text-sm font-bold bg-emerald-500 text-white shadow-sm ring-2 ring-emerald-300 transition-colors">2% (28 ก.พ. 69)</button>
-                        <button id="rule2BeforeBtn" onclick="applyGlobalRule('2_before')" class="px-3 py-1.5 rounded-md text-sm font-bold bg-slate-600 text-slate-300 hover:bg-slate-500 transition-colors">2% (ก่อน 28 ก.พ. 69)</button>
-                        <button id="rule4Btn" onclick="applyGlobalRule('4')" class="px-3 py-1.5 rounded-md text-sm font-bold bg-slate-600 text-slate-300 hover:bg-slate-500 transition-colors">หัก 4% (เดิม)</button>
+                    <div class="bg-slate-700 px-3 py-2 rounded-lg border border-slate-600 shadow-inner text-sm text-slate-100">
+                        เกณฑ์ ว190 คำนวณอัตโนมัติตามวันส่งมอบของแต่ละงวด
                     </div>
                 </div>
             </div>
@@ -130,8 +166,9 @@
                 <div class="text-sm text-amber-800 leading-relaxed">
                     <strong>ข้อควรระวังการใช้เกณฑ์ (ว190):</strong> <br>
                     <ul class="list-disc pl-4 mt-1 space-y-1">
-                        <li><strong>เกณฑ์ 2%:</strong> ใช้สำหรับงวดงานที่ส่งมอบ 28 ก.พ. - 30 ก.ย. 69</li>
-                        <li><strong>การเปลี่ยนเดือนฐาน:</strong> หากเป็น 2% (28 ก.พ. 69) ดัชนีฐาน o จะเปลี่ยนเป็น <span class="text-emerald-700 font-bold">"วันอนุมัติราคากลาง"</span> อัตโนมัติ</li>
+                        <li><strong>อัตราหัก:</strong> ใช้ ±2% เฉพาะงวดที่ส่งมอบตั้งแต่ 28 ก.พ. ถึง 30 ก.ย. 2569 ส่วนงวดนอกช่วงใช้ ±4%</li>
+                        <li><strong>เดือนดัชนีฐาน:</strong> ดูจากวันลงนามสัญญา หากลงนามตั้งแต่ 28 ก.พ. ถึง 30 ก.ย. 2569 ให้กรอกวันที่หัวหน้าหน่วยงานเห็นชอบราคากลาง หากลงนามนอกช่วงให้กรอกวันเปิดซองประกวดราคา</li>
+                        <li><strong>กำหนดใช้มาตรการ:</strong> ว233 กำหนดให้ยื่นขอภายใน 29 ธ.ค. 2569 หากกำหนด 90 วันจากวันส่งมอบงวดสุดท้ายครบก่อน ให้ตรวจและยื่นตามกำหนดที่เร็วกว่าตามเงื่อนไขที่เกี่ยวข้อง</li>
                         <li class="text-rose-600 font-medium">กรณีส่งงานล่าช้ากว่าสัญญา ให้ใช้ดัชนีเดือนที่ส่งงานจริง เปรียบเทียบกับ เดือนที่ครบกำหนดสัญญา และเลือกใช้ค่า K ที่น้อยกว่าเสมอ</li>
                     </ul>
                 </div>
@@ -228,7 +265,7 @@
                     <input type="text" id="info_contractNo" placeholder="เช่น 12/2569" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500">
                 </div>
                 <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-1">ลงวันที่ (เริ่มสัญญา)</label>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">วันลงนามสัญญา</label>
                     <input type="date" id="info_date" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500">
                 </div>
                 <div class="md:col-span-2">
@@ -360,7 +397,7 @@
                     <input type="text" id="editCloud_contractNo" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500">
                 </div>
                 <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-1">ลงวันที่ (เริ่มสัญญา)</label>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">วันลงนามสัญญา</label>
                     <input type="date" id="editCloud_date" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500">
                 </div>
                 <div class="md:col-span-2">
@@ -403,6 +440,64 @@
         </div>
     </div>
 
+    <!-- Modal แบบฟอร์ม Unit Price Contract -->
+    <div id="unitPriceModal" class="hidden fixed inset-0 z-[75] items-center justify-center p-3 md:p-5">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeUnitPriceModal()"></div>
+        <div class="relative bg-white w-full max-w-[1500px] rounded-2xl shadow-2xl z-10 overflow-hidden flex flex-col max-h-[94vh] border border-slate-200">
+            <div class="bg-slate-50 px-6 py-4 flex justify-between items-center border-b border-slate-200 shrink-0">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-800">แบบฟอร์มคำนวณค่าชดเชยค่า K · Unit Price Contract</h2>
+                    <p class="text-xs text-slate-500 mt-1">กรอกช่องพื้นสีเหลือง ระบบคำนวณยอดเงินและส่วนต่างค่า K ให้อัตโนมัติ</p>
+                </div>
+                <button onclick="closeUnitPriceModal()" class="text-slate-400 hover:text-slate-600" aria-label="ปิด"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+            <div class="p-5 overflow-auto flex-1 bg-white">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 mb-5 text-sm">
+                    <label class="grid grid-cols-[155px_1fr] items-center gap-2"><span class="font-semibold text-slate-600">กรม/หน่วยงาน</span><input id="up_department" data-field="department" oninput="updateUnitPriceMeta(this.dataset.field,this.value)" class="up-meta"></label>
+                    <label class="grid grid-cols-[155px_1fr] items-center gap-2"><span class="font-semibold text-slate-600">วันที่เปิดซอง/เสนอราคา</span><input id="up_bidDate" type="date" data-field="bidDate" oninput="updateUnitPriceMeta(this.dataset.field,this.value)" class="up-meta"></label>
+                    <label class="grid grid-cols-[155px_1fr] items-center gap-2"><span class="font-semibold text-slate-600">ชื่อโครงการ</span><input id="up_projectName" data-field="projectName" oninput="updateUnitPriceMeta(this.dataset.field,this.value)" class="up-meta"></label>
+                    <label class="grid grid-cols-[155px_1fr] items-center gap-2"><span class="font-semibold text-slate-600">สัญญาเลขที่</span><input id="up_contractNo" data-field="contractNo" oninput="updateUnitPriceMeta(this.dataset.field,this.value)" class="up-meta"></label>
+                    <label class="grid grid-cols-[155px_1fr] items-center gap-2"><span class="font-semibold text-slate-600">ผู้รับจ้าง</span><input id="up_contractor" data-field="contractor" oninput="updateUnitPriceMeta(this.dataset.field,this.value)" class="up-meta"></label>
+                    <label class="grid grid-cols-[155px_1fr] items-center gap-2"><span class="font-semibold text-slate-600">ค่างานทั้งสัญญา (บาท)</span><input id="up_contractValue" data-field="contractValue" oninput="updateUnitPriceMeta(this.dataset.field,this.value)" class="up-meta"></label>
+                    <label class="grid grid-cols-[155px_1fr] items-center gap-2"><span class="font-semibold text-slate-600">วันลงนามสัญญา</span><input id="up_contractDate" type="date" data-field="contractDate" oninput="updateUnitPriceMeta(this.dataset.field,this.value)" class="up-meta"></label>
+                    <label class="grid grid-cols-[155px_1fr] items-center gap-2"><span class="font-semibold text-slate-600">วันสิ้นสุดสัญญา</span><input id="up_contractEndDate" type="date" data-field="contractEndDate" oninput="updateUnitPriceMeta(this.dataset.field,this.value)" class="up-meta"></label>
+                    <label class="grid grid-cols-[155px_1fr] items-center gap-2"><span class="font-semibold text-slate-600">วันที่ขอรับเงิน</span><input id="up_requestDate" type="date" data-field="requestDate" oninput="updateUnitPriceMeta(this.dataset.field,this.value)" class="up-meta"></label>
+                    <label class="grid grid-cols-[155px_1fr] items-center gap-2"><span class="font-semibold text-slate-600">งวดที่ / ครั้งที่ยื่นขอ</span><span class="flex gap-2"><input id="up_installment" data-field="installment" oninput="updateUnitPriceMeta(this.dataset.field,this.value)" placeholder="งวดที่" class="up-meta w-1/2"><input id="up_requestNo" data-field="requestNo" oninput="updateUnitPriceMeta(this.dataset.field,this.value)" placeholder="ครั้งที่" class="up-meta w-1/2"></span></label>
+                    <label class="grid grid-cols-[155px_1fr] items-center gap-2"><span class="font-semibold text-slate-600">ผู้คำนวณ</span><input id="up_calculator" data-field="calculatorName" oninput="updateUnitPriceMeta(this.dataset.field,this.value)" class="up-meta"></label>
+                    <label class="grid grid-cols-[155px_1fr] items-center gap-2"><span class="font-semibold text-slate-600">ตำแหน่ง</span><input id="up_position" data-field="calculatorPos" oninput="updateUnitPriceMeta(this.dataset.field,this.value)" class="up-meta"></label>
+                </div>
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                    <div id="unitPriceFormStatus" class="text-xs font-semibold text-slate-500">ข้อมูลแบบฟอร์มจะบันทึกไปพร้อมงาน</div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="importCalculatedUnitPriceItems()" class="px-3 py-2 rounded-lg text-sm font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100">ดึงข้อมูลจากงานที่คำนวณแล้ว</button>
+                        <button onclick="addUnitPriceLine()" class="px-3 py-2 rounded-lg text-sm font-bold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100">＋ เพิ่มรายการ</button>
+                    </div>
+                </div>
+                <div class="overflow-auto border-2 border-black">
+                    <table class="min-w-[1500px] w-full text-xs text-center border-collapse">
+                        <thead class="sticky top-0 z-10">
+                            <tr class="bg-white text-black font-bold">
+                                <th rowspan="2" class="border-2 border-black p-2 w-10">ลำดับที่</th><th rowspan="2" class="border-2 border-black p-2 min-w-56">รายการ</th>
+                                <th colspan="4" class="border-2 border-black p-2">ค่างานตามสัญญา</th><th rowspan="2" class="border-2 border-black p-2 min-w-20">สูตรค่า K</th>
+                                <th colspan="2" class="border-2 border-black p-2">งานที่ส่งมอบครั้งนี้</th><th rowspan="2" class="border-2 border-black p-2 min-w-28">หักค่างานเกินสัญญา (บาท)</th>
+                                <th colspan="2" class="border-2 border-black p-2">การคำนวณค่า K</th><th rowspan="2" class="border-2 border-black p-2 min-w-32">เพิ่มขึ้น/ลดลง (บาท)</th><th rowspan="2" class="border-2 border-black p-2 min-w-32">หมายเหตุ</th><th rowspan="2" class="border-2 border-black p-2 no-print">จัดการ</th>
+                            </tr>
+                            <tr class="bg-white text-black font-semibold"><th class="border-2 border-black p-2">ปริมาณ</th><th class="border-2 border-black p-2">หน่วย</th><th class="border-2 border-black p-2">ราคาต่อหน่วย (บาท)</th><th class="border-2 border-black p-2">จำนวนเงิน (บาท)</th><th class="border-2 border-black p-2">ปริมาณ</th><th class="border-2 border-black p-2">จำนวนเงิน (บาท)</th><th class="border-2 border-black p-2">ค่า K</th><th class="border-2 border-black p-2">หักเกณฑ์แล้วคงเหลือ</th></tr>
+                        </thead>
+                        <tbody id="unitPriceTableBody" class="divide-y divide-slate-200"></tbody>
+                        <tfoot><tr class="bg-slate-100 font-bold"><td colspan="5" class="border border-slate-400 p-2 text-right">รวมทั้งสิ้น</td><td id="up_totalContract" class="border border-slate-400 p-2 text-right">0.00</td><td class="border border-slate-400 p-2"></td><td class="border border-slate-400 p-2"></td><td id="up_totalSubmitted" class="border border-slate-400 p-2 text-right">0.00</td><td id="up_totalExcess" class="border border-slate-400 p-2 text-right">0.00</td><td class="border border-slate-400 p-2" colspan="2"></td><td id="up_totalCompensation" class="border border-slate-400 p-2 text-right">0.00</td><td colspan="2" class="border border-slate-400 p-2"></td></tr></tfoot>
+                    </table>
+                </div>
+                <p class="mt-3 text-[11px] text-slate-500">ส่วนต่างค่า K คำนวณตามอัตรา ±2% หรือ ±4% ของรายการที่เลือกจากระบบหลัก และระบบหักมูลค่าปริมาณงานที่ส่งเกินปริมาณตามสัญญาออกจากฐานคำนวณ</p>
+            </div>
+            <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 border-t border-slate-200 shrink-0">
+                <button onclick="closeUnitPriceModal()" class="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-200">ปิด</button>
+                <button onclick="saveUnitPriceForm()" class="px-4 py-2 rounded-lg text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700">บันทึกแบบฟอร์ม</button>
+                <button onclick="printUnitPriceForm()" class="px-4 py-2 rounded-lg text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700">พิมพ์แบบฟอร์ม</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal ดัชนีหลัก -->
     <div id="indexModal" class="hidden fixed inset-0 z-[80] items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeIndexModal()"></div>
@@ -438,7 +533,7 @@
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-5 border-b border-slate-100">
                     <div class="flex items-center gap-3">
                         <label class="text-sm font-bold text-slate-700">เดือน:</label>
-                        <input type="month" id="indexMonthSelector" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
+                        <input type="month" id="indexMonthSelector" onchange="loadIndexMonth(this.value)" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
                         <span id="indexStatus" class="text-xs font-semibold text-rose-500">ไม่มีข้อมูลเดือนนี้</span>
                     </div>
                     <div class="flex gap-2">
@@ -593,6 +688,7 @@
             'AC': 'ท่อใยหิน (AC)', 'PVC': 'ท่อ PVC', 'GIP': 'ท่อเหล็กสังกะสี (GIP)', 'PE': 'ท่อ HDPE (PE)', 'W': 'สายไฟฟ้า (W)'
         };
 
+        const FORMULA_NO_K = 'NO_K';
         const K_FORMULAS = {
             'K1': { name: 'K1 - งานอาคาร', terms: [{c:0.25}, {c:0.15, v:'I'}, {c:0.10, v:'C'}, {c:0.40, v:'M'}, {c:0.10, v:'S'}] },
             'K2.1': { name: 'K2.1 - งานดิน (ทั่วไป)', terms: [{c:0.30}, {c:0.10, v:'I'}, {c:0.40, v:'E'}, {c:0.20, v:'F'}] },
@@ -632,18 +728,42 @@
         };
 
         let items = [
-            { id: 1, period: '1', name: 'งานรื้อและบดอัดดินเดิม', formula: 'K2.1', baseDate: '', deliveryDate: '', po: '', kValue: '', rule: '2_after', indices: { base: {}, curr: {} } },
-            { id: 2, period: '1', name: 'งานชั้นพื้นทาง (หินคลุก)', formula: 'K3.1', baseDate: '', deliveryDate: '', po: '', kValue: '', rule: '2_after', indices: { base: {}, curr: {} } },
-            { id: 3, period: '1', name: 'งานผิวจราจร AC', formula: 'K3.3', baseDate: '', deliveryDate: '', po: '', kValue: '', rule: '2_after', indices: { base: {}, curr: {} } }
+            { id: 1, period: '1', name: 'งานรื้อและบดอัดดินเดิม', formula: 'K2.1', baseDate: '', deliveryDate: '', po: '', kValue: '', rule: '4', indices: { base: {}, curr: {} } },
+            { id: 2, period: '1', name: 'งานชั้นพื้นทาง (หินคลุก)', formula: 'K3.1', baseDate: '', deliveryDate: '', po: '', kValue: '', rule: '4', indices: { base: {}, curr: {} } },
+            { id: 3, period: '1', name: 'งานผิวจราจร AC', formula: 'K3.3', baseDate: '', deliveryDate: '', po: '', kValue: '', rule: '4', indices: { base: {}, curr: {} } }
         ];
 
         let projectInfo = { 
             name: '', type: '', contractNo: '', date: '', contractor: '', contractValue: '', requestDate: '',
             calculatorName: '', calculatorPos: 'นายช่างโยธาชำนาญงาน'
         };
-        let currentGlobalRule = '2_after'; // ค่าเริ่มต้นของปุ่ม (มี '4', '2_before', '2_after')
+        let unitPriceForm = { meta: {}, lines: [] };
+        let currentGlobalRule = '4'; // เก็บไว้รองรับข้อมูลโครงการรุ่นเดิม; เกณฑ์ปัจจุบันคำนวณจากวันที่
         let activeModalItemId = null;
         let currentLoadedProjectId = null; 
+
+        const W190_START_DATE = '2026-02-28';
+        const W190_END_DATE = '2026-09-30';
+
+        function isWithinW190(dateString) {
+            const date = String(dateString || '').slice(0, 10);
+            return /^\d{4}-\d{2}-\d{2}$/.test(date) && date >= W190_START_DATE && date <= W190_END_DATE;
+        }
+
+        function getBaseDateLabel() {
+            if (!projectInfo.date) return 'วันดัชนีฐาน (กรอกวันลงนามสัญญา)';
+            return isWithinW190(projectInfo.date) ? 'วันที่อนุมัติราคากลาง' : 'วันที่เปิดซองประกวดราคา';
+        }
+
+        function getItemRulePercent(item) {
+            if (!item?.deliveryDate) return null;
+            return isWithinW190(item.deliveryDate) ? 2 : 4;
+        }
+
+        function syncRulesFromDates() {
+            items = items.map(item => ({ ...item, rule: getItemRulePercent(item) === 2 ? '2_after' : '4' }));
+            currentGlobalRule = projectInfo.date && isWithinW190(projectInfo.date) ? '2_after' : '4';
+        }
 
         function truncate3(num) {
             const numStr = Number(num).toFixed(6);
@@ -682,8 +802,23 @@
             return new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num || 0); 
         }
 
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[ch]));
+        }
+
+        function normalizeItemPeriods(list) {
+            let lastPeriod = '';
+            return list.map(item => {
+                const enteredPeriod = String(item.period ?? '').trim();
+                if (enteredPeriod) lastPeriod = enteredPeriod;
+                return { ...item, period: enteredPeriod || lastPeriod || '1' };
+            });
+        }
+
         function getFormulaOptionsHTML(selectedValue) {
-            let html = '';
+            let html = `<option value="${FORMULA_NO_K}" ${selectedValue === FORMULA_NO_K ? 'selected' : ''}>ไม่อยู่ในสูตรค่า K</option>`;
             const groups = {
                 'งานอาคาร': ['K1'],
                 'งานดิน': ['K2.1', 'K2.2', 'K2.3'],
@@ -704,13 +839,15 @@
             return html;
         }
 
-        function calculateRow(poStr, kStr, rule) {
+        function calculateRow(poStr, kStr, rule, formulaKey, calculationReady) {
+            if (formulaKey === FORMULA_NO_K) return { amount: 0, type: 'EXCLUDED', multiplier: 0 };
+            if (!calculationReady) return { amount: 0, type: 'WAITING', multiplier: 0 };
             const safePoStr = (poStr !== undefined && poStr !== null) ? poStr.toString() : '0';
             const po = parseFloat(safePoStr.replace(/,/g, '')) || 0;
             const k = parseFloat(kStr) || 0;
             if (po <= 0 || k <= 0) return { amount: 0, type: 'NONE', multiplier: 0 };
             
-            // ใช้เกณฑ์ตามปุ่มที่เลือก (starts with '2' สำหรับ 2_after และ 2_before)
+            // ค่า rule กำหนดอัตโนมัติจากวันส่งมอบก่อนคำนวณ
             const upper = rule === '4' ? 1.040 : 1.020;
             const lower = rule === '4' ? 0.960 : 0.980;
             
@@ -725,39 +862,24 @@
             return { amount: 0, type: 'NONE', multiplier: 0 };
         }
 
-        function applyGlobalRule(rule) { 
-            currentGlobalRule = rule;
-            items.forEach(i => i.rule = rule); 
-            render(); 
-            
-            const ruleName = rule === '4' ? 'หัก 4%' : (rule === '2_after' ? '2% (28 ก.พ. 69)' : '2% (ก่อน 28 ก.พ. 69)');
-            showToast(`เปลี่ยนเกณฑ์หักเป็น ${ruleName} ทุกรายการแล้ว`, 'success');
-        }
-
         function render() {
+            syncRulesFromDates();
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
             let poTot = 0, incTot = 0, decTot = 0;
 
-            // จัดการอัปเดตสีของปุ่ม 3 ปุ่ม
-            const btn2After = document.getElementById('rule2AfterBtn');
-            const btn2Before = document.getElementById('rule2BeforeBtn');
-            const btn4 = document.getElementById('rule4Btn');
-            
-            if (btn2After && btn2Before && btn4) {
-                btn2After.className = `px-3 py-1.5 rounded-md text-sm font-bold transition-colors ${currentGlobalRule === '2_after' ? 'bg-emerald-500 text-white shadow-sm ring-2 ring-emerald-300' : 'bg-slate-600 text-slate-300 hover:bg-slate-500'}`;
-                btn2Before.className = `px-3 py-1.5 rounded-md text-sm font-bold transition-colors ${currentGlobalRule === '2_before' ? 'bg-teal-500 text-white shadow-sm ring-2 ring-teal-300' : 'bg-slate-600 text-slate-300 hover:bg-slate-500'}`;
-                btn4.className = `px-3 py-1.5 rounded-md text-sm font-bold transition-colors ${currentGlobalRule === '4' ? 'bg-blue-500 text-white shadow-sm ring-2 ring-blue-300' : 'bg-slate-600 text-slate-300 hover:bg-slate-500'}`;
-            }
-
-            // จัดการชื่อหัวตาราง (ดัชนีฐาน o)
+            // เดือนฐานเลือกตามวันลงนามสัญญา แยกจากอัตราหักที่เลือกตามวันส่งมอบ
             const baseDateHeader = document.getElementById('baseDateHeader');
             if (baseDateHeader) {
-                if (currentGlobalRule === '2_after') {
-                    baseDateHeader.innerHTML = 'วันอนุมัติราคากลาง<br><span class="text-[10px] text-emerald-700 font-bold tracking-normal">(เดือนฐาน o)</span>';
+                const label = getBaseDateLabel();
+                if (!projectInfo.date) {
+                    baseDateHeader.innerHTML = `${label}<br><span class="text-[10px] text-amber-700 font-bold tracking-normal">(เดือนฐาน o)</span>`;
+                    baseDateHeader.className = "p-3 w-40 text-center font-bold leading-tight transition-all duration-300 rounded-t-lg bg-amber-100 text-amber-800 shadow-inner";
+                } else if (isWithinW190(projectInfo.date)) {
+                    baseDateHeader.innerHTML = `${label}<br><span class="text-[10px] text-emerald-700 font-bold tracking-normal">(เดือนฐาน o)</span>`;
                     baseDateHeader.className = "p-3 w-40 text-center font-bold leading-tight transition-all duration-300 rounded-t-lg bg-emerald-100 text-emerald-800 shadow-inner";
                 } else {
-                    baseDateHeader.innerHTML = 'วันเปิดซองประกวดราคา<br><span class="text-[10px] text-blue-700 font-bold tracking-normal">(เดือนฐาน o)</span>';
+                    baseDateHeader.innerHTML = `${label}<br><span class="text-[10px] text-blue-700 font-bold tracking-normal">(เดือนฐาน o)</span>`;
                     baseDateHeader.className = "p-3 w-40 text-center font-bold leading-tight transition-all duration-300 rounded-t-lg bg-blue-100 text-blue-800 shadow-inner";
                 }
             }
@@ -772,7 +894,9 @@
 
             items.forEach(item => {
                 const safePo = item.po !== undefined && item.po !== null ? item.po.toString() : '0';
-                const res = calculateRow(safePo, item.kValue, item.rule);
+                const isKEligible = item.formula !== FORMULA_NO_K;
+                const calculationReady = Boolean(projectInfo.date && item.baseDate && item.deliveryDate);
+                const res = calculateRow(safePo, item.kValue, item.rule, item.formula, calculationReady);
                 const poVal = parseFloat(safePo.replace(/,/g, '')) || 0;
                 poTot += poVal;
                 
@@ -806,31 +930,29 @@
                     </td>
                     <td class="p-2 align-top">
                         <div class="flex items-stretch gap-1">
-                            <input type="number" step="0.001" value="${item.kValue}" onchange="updateItem(${item.id}, 'kValue', this.value)" placeholder="1.000" class="${inputClass} text-center text-blue-700 font-bold !pr-1">
-                            <button onclick="openCalcModal(${item.id})" class="flex items-center justify-center bg-blue-100 hover:bg-blue-600 text-blue-600 hover:text-white transition-colors rounded-lg border border-blue-200 px-2.5 shadow-sm" title="คำนวณค่า K จากดัชนี">
+                            <input type="number" step="0.001" value="${isKEligible ? item.kValue : ''}" onchange="updateItem(${item.id}, 'kValue', this.value)" placeholder="${isKEligible ? '1.000' : 'ไม่คำนวณ'}" ${isKEligible ? '' : 'disabled'} class="${inputClass} text-center text-blue-700 font-bold !pr-1 ${isKEligible ? '' : 'opacity-50 cursor-not-allowed'}">
+                            <button onclick="openCalcModal(${item.id})" ${isKEligible ? '' : 'disabled'} class="flex items-center justify-center bg-blue-100 hover:bg-blue-600 text-blue-600 hover:text-white transition-colors rounded-lg border border-blue-200 px-2.5 shadow-sm ${isKEligible ? '' : 'opacity-40 cursor-not-allowed'}" title="${isKEligible ? 'คำนวณค่า K จากดัชนี' : 'รายการนี้ไม่อยู่ในสูตรค่า K'}">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16v16H4V4zm4 4h8v2H8V8zm0 6h2v2H8v-2zm4 0h2v2h-2v-2zm-4 4h2v2H8v-2zm4 0h2v2h-2v-2z"></path></svg>
                             </button>
                         </div>
                     </td>
                     <td class="p-2 align-top text-center">
-                        <select onchange="updateItem(${item.id}, 'rule', this.value)" class="w-full p-2.5 border rounded-lg outline-none font-bold cursor-pointer text-sm shadow-sm transition-colors ${item.rule && item.rule.startsWith('2') ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-blue-50 text-blue-700 border-blue-300'}">
-                            <option value="4" ${item.rule=='4'?'selected':''}>หัก 4%</option>
-                            <option value="2_after" ${item.rule=='2_after'?'selected':''}>2% (28 ก.พ. 69)</option>
-                            <option value="2_before" ${item.rule=='2_before'?'selected':''}>2% (ก่อน ก.พ. 69)</option>
-                        </select>
+                        <div class="w-full p-2.5 border rounded-lg text-center font-bold text-sm shadow-sm ${getItemRulePercent(item) === 2 ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : item.deliveryDate ? 'bg-blue-50 text-blue-700 border-blue-300' : 'bg-amber-50 text-amber-700 border-amber-300'}">
+                            ${item.deliveryDate ? `±${getItemRulePercent(item)}% · ${getItemRulePercent(item) === 2 ? 'อยู่ในช่วงผ่อนผัน' : 'เกณฑ์ปกติ'}` : 'ระบุวันส่งมอบก่อน'}
+                        </div>
                     </td>
                     <td class="p-2 align-top text-center">
                         <div class="mt-2.5 flex justify-center">
                             <span class="px-2 py-1 rounded font-mono text-xs ${res.type === 'NONE' ? 'text-slate-400 bg-slate-100' : 'text-slate-700 bg-slate-200 border border-slate-300 shadow-sm'}">
-                                ${res.multiplier.toFixed(3)}
+                                ${res.type === 'EXCLUDED' ? '—' : res.type === 'WAITING' ? 'รอวันที่' : res.multiplier.toFixed(3)}
                             </span>
                         </div>
                     </td>
                     <td class="p-2 align-top text-right bg-white/50 rounded-lg">
                         <div class="mt-1 font-bold text-lg ${res.type === 'INCREASE' ? 'text-emerald-600' : res.type === 'DECREASE' ? 'text-rose-600' : 'text-slate-400'}">
-                            ${res.type === 'DECREASE' ? '-' : ''}${formatNum(res.amount)}
+                            ${res.type === 'EXCLUDED' ? '—' : res.type === 'WAITING' ? '—' : (res.type === 'DECREASE' ? '-' : '') + formatNum(res.amount)}
                         </div>
-                        <div class="text-[9px] text-slate-400 mt-0.5 uppercase tracking-wider font-semibold">${res.type}</div>
+                        <div class="text-[9px] text-slate-400 mt-0.5 tracking-wider font-semibold">${res.type === 'EXCLUDED' ? 'ไม่คำนวณค่า K' : res.type === 'WAITING' ? 'กรอกวันสัญญา/เดือนฐาน/วันส่งมอบก่อน' : res.type}</div>
                     </td>
                     <td class="p-2 align-top text-center">
                         <button onclick="removeItem(${item.id})" class="mt-1.5 text-slate-300 hover:text-rose-500 transition-colors p-2 rounded-full hover:bg-rose-50" title="ลบรายการ">
@@ -892,9 +1014,294 @@
             `;
         }
 
+        function unitPriceLineTemplate(sourceItem = null) {
+            return {
+                id: `up_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+                sourceItemId: sourceItem?.id ?? '', name: sourceItem?.name || '', contractQty: '', unit: '', unitPrice: '',
+                deliveryQty: '', deliveryAmount: sourceItem?.po || '', formula: sourceItem?.formula || '', kValue: sourceItem?.kValue || '',
+                deliveryDate: sourceItem?.deliveryDate || '', rulePercent: getItemRulePercent(sourceItem) || null, note: ''
+            };
+        }
+
+        function unitPriceNumber(value) {
+            const n = parseFloat(String(value ?? '').replace(/,/g, ''));
+            return Number.isFinite(n) ? n : 0;
+        }
+
+        function unitPriceLineResult(line) {
+            const source = items.find(item => String(item.id) === String(line.sourceItemId));
+            const formula = source?.formula || line.formula;
+            const kValue = unitPriceNumber(source?.kValue ?? line.kValue);
+            const percent = getItemRulePercent(source) || Number(line.rulePercent) || null;
+            const contractQty = unitPriceNumber(line.contractQty);
+            const deliveryQty = unitPriceNumber(line.deliveryQty);
+            const unitPrice = unitPriceNumber(line.unitPrice);
+            const contractAmount = contractQty * unitPrice;
+            const submittedAmount = deliveryQty && unitPrice ? deliveryQty * unitPrice : unitPriceNumber(source?.po ?? line.deliveryAmount);
+            const excessAmount = Math.max(deliveryQty - contractQty, 0) * unitPrice;
+            let delta = null;
+            let compensation = null;
+            if (formula === FORMULA_NO_K) {
+                delta = null;
+                compensation = 0;
+            } else if (kValue > 0 && percent !== null) {
+                const threshold = percent / 100;
+                delta = kValue > 1 + threshold ? kValue - (1 + threshold) : kValue < 1 - threshold ? kValue - (1 - threshold) : 0;
+                compensation = (submittedAmount - excessAmount) * delta;
+            }
+            return { contractAmount, submittedAmount, excessAmount, kValue, percent, delta, compensation, formula };
+        }
+
+        function syncUnitPriceMetaFromProject() {
+            unitPriceForm.meta ||= {};
+            const m = unitPriceForm.meta;
+            m.department ||= 'องค์การบริหารส่วนจังหวัดพิษณุโลก';
+            if (projectInfo.name) m.projectName = projectInfo.name;
+            if (projectInfo.contractNo) m.contractNo = projectInfo.contractNo;
+            if (projectInfo.contractor) m.contractor = projectInfo.contractor;
+            if (projectInfo.contractValue) m.contractValue = projectInfo.contractValue;
+            if (projectInfo.date) m.contractDate = projectInfo.date;
+            if (projectInfo.requestDate) m.requestDate = projectInfo.requestDate;
+            if (projectInfo.calculatorName) m.calculatorName = projectInfo.calculatorName;
+            if (projectInfo.calculatorPos) m.calculatorPos = projectInfo.calculatorPos;
+            m.requestNo ||= '1';
+        }
+
+        function openUnitPriceModal() {
+            unitPriceForm ||= { meta: {}, lines: [] };
+            unitPriceForm.meta ||= {};
+            unitPriceForm.lines ||= [];
+            syncUnitPriceMetaFromProject();
+            if (!unitPriceForm.lines.length) unitPriceForm.lines = [unitPriceLineTemplate()];
+            unitPriceForm.lines.forEach(line => {
+                const source = items.find(item => String(item.id) === String(line.sourceItemId));
+                if (source) {
+                    line.formula = source.formula || '';
+                    line.kValue = source.kValue || '';
+                    line.deliveryDate = source.deliveryDate || '';
+                    line.rulePercent = getItemRulePercent(source);
+                }
+            });
+            const metaFields = {
+                department:'department', bidDate:'bidDate', projectName:'projectName', contractNo:'contractNo', contractor:'contractor',
+                contractValue:'contractValue', contractDate:'contractDate', contractEndDate:'contractEndDate', requestDate:'requestDate',
+                installment:'installment', requestNo:'requestNo', calculatorName:'calculatorName', calculatorPos:'calculatorPos'
+            };
+            for (const [id, key] of Object.entries(metaFields)) {
+                const input = document.getElementById(`up_${id}`);
+                if (input) input.value = unitPriceForm.meta[key] || '';
+            }
+            renderUnitPriceLines();
+            document.getElementById('unitPriceModal').classList.remove('hidden');
+            document.getElementById('unitPriceModal').classList.add('flex');
+        }
+
+        function closeUnitPriceModal() {
+            document.getElementById('unitPriceModal').classList.add('hidden');
+            document.getElementById('unitPriceModal').classList.remove('flex');
+        }
+
+        function updateUnitPriceMeta(field, value) {
+            unitPriceForm.meta ||= {};
+            unitPriceForm.meta[field] = value;
+        }
+
+        function unitPriceInput(id, field, value, type = 'number', step = '0.01') {
+            const safeValue = escapeHtml(value ?? '');
+            const stepAttr = type === 'number' ? `step="${step}"` : '';
+            return `<input type="${type}" ${stepAttr} value="${safeValue}" oninput="updateUnitPriceLine('${id}','${field}',this.value)" class="w-full min-w-16 border border-amber-300 rounded px-1.5 py-1 bg-amber-50 outline-none focus:ring-1 focus:ring-indigo-500">`;
+        }
+
+        function renderUnitPriceLines() {
+            const tbody = document.getElementById('unitPriceTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = unitPriceForm.lines.map((line, index) => {
+                const result = unitPriceLineResult(line);
+                const sourceOptions = [`<option value="">เลือกรายการจากตารางค่า K</option>`, ...items.map(item => `<option value="${escapeHtml(item.id)}" ${String(line.sourceItemId) === String(item.id) ? 'selected' : ''}>${escapeHtml(`${item.period || ''} · ${item.name || 'ไม่ระบุรายการ'}`)}</option>`)].join('');
+                const formulaLabel = result.formula === FORMULA_NO_K ? 'ไม่อยู่ในสูตรค่า K' : (K_FORMULAS[result.formula]?.name || result.formula || '');
+                const display = (v, digits=2) => v === null || !Number.isFinite(v) ? '—' : new Intl.NumberFormat('th-TH',{minimumFractionDigits:digits,maximumFractionDigits:digits}).format(v);
+                return `<tr class="hover:bg-slate-50">
+                    <td class="border border-black p-1.5">${index + 1}</td>
+                    <td class="border border-black p-1.5"><select onchange="setUnitPriceSource('${line.id}',this.value)" class="w-full min-w-52 border border-amber-300 rounded px-1.5 py-1 bg-amber-50 mb-1">${sourceOptions}</select>${unitPriceInput(line.id,'name',line.name,'text')}</td>
+                    <td class="border border-black p-1.5">${unitPriceInput(line.id,'contractQty',line.contractQty)}</td>
+                    <td class="border border-black p-1.5">${unitPriceInput(line.id,'unit',line.unit,'text')}</td>
+                    <td class="border border-black p-1.5">${unitPriceInput(line.id,'unitPrice',line.unitPrice)}</td>
+                    <td id="up_contract_${line.id}" class="border border-black p-1.5 text-right">${display(result.contractAmount)}</td>
+                    <td class="border border-black p-1.5 text-left" title="${escapeHtml(formulaLabel)}">${escapeHtml(formulaLabel)}</td>
+                    <td class="border border-black p-1.5">${unitPriceInput(line.id,'deliveryQty',line.deliveryQty)}</td>
+                    <td id="up_submitted_${line.id}" class="border border-black p-1.5 text-right">${display(result.submittedAmount)}</td>
+                    <td id="up_excess_${line.id}" class="border border-black p-1.5 text-right">${display(result.excessAmount)}</td>
+                    <td id="up_k_${line.id}" class="border border-black p-1.5">${result.formula === FORMULA_NO_K ? '—' : (result.kValue ? result.kValue.toFixed(3) : '—')}</td>
+                    <td id="up_delta_${line.id}" class="border border-black p-1.5">${result.delta === null ? '—' : `${result.delta >= 0 ? '+' : ''}${result.delta.toFixed(3)} · ${result.percent}%`}</td>
+                    <td id="up_comp_${line.id}" class="border border-black p-1.5 text-right font-bold">${result.compensation === null ? '—' : display(result.compensation)}</td>
+                    <td class="border border-black p-1.5">${unitPriceInput(line.id,'note',line.note,'text')}</td>
+                    <td class="border border-black p-1.5 no-print"><button onclick="removeUnitPriceLine('${line.id}')" class="text-rose-500 hover:text-rose-700 px-2">×</button></td>
+                </tr>`;
+            }).join('');
+            refreshUnitPriceTotals();
+        }
+
+        function refreshUnitPriceTotals() {
+            const totals = unitPriceForm.lines.reduce((acc, line) => {
+                const result = unitPriceLineResult(line);
+                acc.contract += result.contractAmount;
+                acc.submitted += result.submittedAmount;
+                acc.excess += result.excessAmount;
+                if (result.compensation !== null) acc.compensation += result.compensation;
+                return acc;
+            }, { contract:0, submitted:0, excess:0, compensation:0 });
+            const fmt = n => formatNum(n);
+            for (const [id, val] of [['up_totalContract',totals.contract],['up_totalSubmitted',totals.submitted],['up_totalExcess',totals.excess],['up_totalCompensation',totals.compensation]]) {
+                const el = document.getElementById(id); if (el) el.textContent = fmt(val);
+            }
+        }
+
+        function updateUnitPriceLine(id, field, value) {
+            const line = unitPriceForm.lines.find(row => String(row.id) === String(id));
+            if (!line) return;
+            line[field] = value;
+            const result = unitPriceLineResult(line);
+            const fmt = n => n === null ? '—' : formatNum(n);
+            const set = (suffix, text) => { const el = document.getElementById(`up_${suffix}_${id}`); if (el) el.textContent = text; };
+            set('contract', fmt(result.contractAmount));
+            set('submitted', fmt(result.submittedAmount));
+            set('excess', fmt(result.excessAmount));
+            set('k', result.formula === FORMULA_NO_K ? '—' : (result.kValue ? result.kValue.toFixed(3) : '—'));
+            set('delta', result.delta === null ? '—' : `${result.delta >= 0 ? '+' : ''}${result.delta.toFixed(3)} · ${result.percent}%`);
+            set('comp', fmt(result.compensation));
+            refreshUnitPriceTotals();
+        }
+
+        function setUnitPriceSource(lineId, itemId) {
+            const line = unitPriceForm.lines.find(row => String(row.id) === String(lineId));
+            const source = items.find(item => String(item.id) === String(itemId));
+            if (!line) return;
+            line.sourceItemId = source?.id ?? '';
+            if (source) {
+                line.name = source.name || line.name;
+                line.formula = source.formula || '';
+                line.kValue = source.kValue || '';
+                line.deliveryDate = source.deliveryDate || '';
+                line.rulePercent = getItemRulePercent(source);
+            }
+            renderUnitPriceLines();
+        }
+
+        function addUnitPriceLine() {
+            unitPriceForm.lines.push(unitPriceLineTemplate());
+            renderUnitPriceLines();
+        }
+
+        function importCalculatedUnitPriceItems() {
+            const calculated = items.filter(item => {
+                const hasAmount = unitPriceNumber(item.po) > 0;
+                const hasDates = Boolean(projectInfo.date && item.baseDate && item.deliveryDate);
+                const isNonK = item.formula === FORMULA_NO_K;
+                const hasKResult = Number(item.kValue) > 0;
+                return hasAmount && hasDates && (isNonK || hasKResult);
+            });
+            if (!calculated.length) {
+                showToast('ยังไม่พบรายการที่คำนวณแล้ว กรุณาตรวจวันฐาน วันส่งมอบ และผลค่า K ก่อน', 'warning');
+                return;
+            }
+            unitPriceForm.lines ||= [];
+            const alreadyAdded = new Set(unitPriceForm.lines.map(line => String(line.sourceItemId)).filter(Boolean));
+            const additions = calculated.filter(item => !alreadyAdded.has(String(item.id))).map(item => unitPriceLineTemplate(item));
+            if (!additions.length) {
+                showToast('รายการที่คำนวณแล้วถูกดึงมาในแบบฟอร์มครบแล้ว', 'info');
+                return;
+            }
+            if (unitPriceForm.lines.length === 1 && !unitPriceForm.lines[0].sourceItemId && !unitPriceForm.lines[0].name && !unitPriceForm.lines[0].contractQty && !unitPriceForm.lines[0].deliveryQty) unitPriceForm.lines = [];
+            unitPriceForm.lines.push(...additions);
+            renderUnitPriceLines();
+            showToast(`ดึงข้อมูลรายการที่คำนวณแล้ว ${additions.length} รายการ`, 'success');
+        }
+
+        function removeUnitPriceLine(id) {
+            unitPriceForm.lines = unitPriceForm.lines.filter(line => String(line.id) !== String(id));
+            renderUnitPriceLines();
+        }
+
+        async function saveUnitPriceForm() {
+            if (!currentLoadedProjectId) return showToast('กรุณากดบันทึกงานก่อน เพื่อผูกแบบฟอร์มกับโครงการ', 'warning');
+            try {
+                await db.collection(COLLECTION_NAME).doc(currentLoadedProjectId).set({ unitPriceForm, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+                document.getElementById('unitPriceFormStatus').textContent = 'บันทึกแบบฟอร์มไว้กับโครงการแล้ว';
+                document.getElementById('unitPriceFormStatus').className = 'text-xs font-semibold text-emerald-600';
+                showToast('บันทึกแบบฟอร์ม Unit Price แล้ว', 'success');
+            } catch (error) {
+                console.error(error);
+                showToast('บันทึกแบบฟอร์มไม่สำเร็จ', 'error');
+            }
+        }
+
+        function formatThaiDateForUnitPrice(value) {
+            if (!value) return '................................';
+            const [y,m,d] = String(value).slice(0,10).split('-').map(Number);
+            if (!y || !m || !d) return escapeHtml(value);
+            const months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+            return `${d} ${months[m-1]} ${y+543}`;
+        }
+
+        function printUnitPriceForm() {
+            const m = unitPriceForm.meta || {};
+            const validDates = unitPriceForm.lines.map(line => items.find(item => String(item.id) === String(line.sourceItemId))?.deliveryDate || line.deliveryDate).filter(Boolean).sort();
+            const lastDelivery = validDates.at(-1) || '';
+            const d90 = lastDelivery ? new Date(`${lastDelivery}T00:00:00`) : null;
+            if (d90) d90.setDate(d90.getDate() + 90);
+            const d90Txt = d90 ? formatThaiDateForUnitPrice(`${d90.getFullYear()}-${String(d90.getMonth()+1).padStart(2,'0')}-${String(d90.getDate()).padStart(2,'0')}`) : '................................';
+            let totals = { contract:0, submitted:0, excess:0, compensation:0 };
+            const dataRows = unitPriceForm.lines.map((line,index) => {
+                const result = unitPriceLineResult(line);
+                totals.contract += result.contractAmount; totals.submitted += result.submittedAmount; totals.excess += result.excessAmount;
+                if (result.compensation !== null) totals.compensation += result.compensation;
+                const formulaLabel = result.formula === FORMULA_NO_K ? 'ไม่อยู่ในสูตรค่า K' : (K_FORMULAS[result.formula]?.name || result.formula || '');
+                return `<tr><td>${index+1}</td><td class="up-left">${escapeHtml(line.name || '')}</td><td>${line.contractQty ? formatNum(unitPriceNumber(line.contractQty)) : ''}</td><td>${escapeHtml(line.unit || '')}</td><td class="up-number">${line.unitPrice ? formatNum(unitPriceNumber(line.unitPrice)) : ''}</td><td class="up-number">${line.contractQty && line.unitPrice ? formatNum(result.contractAmount) : ''}</td><td class="up-left">${escapeHtml(formulaLabel)}</td><td>${line.deliveryQty ? formatNum(unitPriceNumber(line.deliveryQty)) : ''}</td><td class="up-number">${result.submittedAmount ? formatNum(result.submittedAmount) : ''}</td><td class="up-number">${result.excessAmount ? formatNum(result.excessAmount) : ''}</td><td>${result.formula === FORMULA_NO_K ? '—' : (result.kValue ? result.kValue.toFixed(3) : '')}</td><td>${result.delta === null ? '' : `${result.delta >= 0 ? '+' : ''}${result.delta.toFixed(3)} (${result.percent}%)`}</td><td class="up-number">${result.compensation === null ? '' : formatNum(result.compensation)}</td><td class="up-left">${escapeHtml(line.note || '')}</td></tr>`;
+            }).join('');
+            const blankRows = Array.from({length: Math.max(0, 13 - unitPriceForm.lines.length)}, () => '<tr>' + '<td></td>'.repeat(14) + '</tr>').join('');
+            const value = key => escapeHtml(m[key] || '................................');
+            const signHtml = `<div class="up-signature"><div>(ลงชื่อ) ........................................................ ผู้คำนวณ<br>( ${value('calculatorName')} )<br>ตำแหน่ง ${value('calculatorPos')}</div></div>`;
+            const printArea = document.getElementById('printArea');
+            printArea.classList.add('unit-price-print');
+            printArea.innerHTML = `<div class="no-print" style="position:sticky;top:0;display:flex;justify-content:flex-end;gap:8px;padding:0 0 8px"><button onclick="window.print()" style="padding:9px 14px;background:#059669;color:#fff;border:0;border-radius:7px;font-weight:bold">สั่งพิมพ์</button><button onclick="closePrintView()" style="padding:9px 14px;background:#475569;color:#fff;border:0;border-radius:7px">ปิด</button></div>
+                <div class="up-sheet">
+                <div class="up-header">
+                    <div class="up-header-col">
+                        <div class="up-header-row"><b>กรม/หน่วยงาน</b><span>${value('department')}</span></div>
+                        <div class="up-header-row"><b>ชื่อโครงการ</b><span>${value('projectName')}</span></div>
+                        <div class="up-header-row"><b>สัญญาเลขที่</b><span>${value('contractNo')}</span></div>
+                        <div class="up-header-row"><b>ผู้รับจ้าง</b><span>${value('contractor')}</span></div>
+                    </div>
+                    <div class="up-header-col">
+                        <div class="up-header-row"><b>วันเปิดซอง/เสนอราคา</b><span>${formatThaiDateForUnitPrice(m.bidDate)}</span></div>
+                        <div class="up-header-row"><b>ค่างานทั้งสัญญา</b><span>${value('contractValue')} บาท</span></div>
+                        <div class="up-header-row"><b>วันลงนามสัญญา</b><span>${formatThaiDateForUnitPrice(m.contractDate)}</span></div>
+                        <div class="up-header-row"><b>วันสิ้นสุดสัญญา</b><span>${formatThaiDateForUnitPrice(m.contractEndDate)}</span></div>
+                        <div class="up-header-row"><b>งวดที่ / ครั้งที่</b><span>${value('installment')} / ${value('requestNo')}</span></div>
+                    </div>
+                    <div class="up-header-col">
+                        <div class="up-header-row"><b>วันส่งงานงวดสุดท้าย</b><span>${formatThaiDateForUnitPrice(lastDelivery)}</span></div>
+                        <div class="up-header-row"><b>ครบ 90 วันหลังส่งงาน</b><span>${d90Txt}</span></div>
+                        <div class="up-header-row"><b>วันที่ขอรับเงิน</b><span>${formatThaiDateForUnitPrice(m.requestDate)}</span></div>
+                    </div>
+                </div>
+                <div style="overflow-x:auto"><table class="up-print-table"><colgroup><col style="width:3%"><col style="width:21%"><col style="width:5%"><col style="width:4%"><col style="width:7%"><col style="width:7%"><col style="width:4%"><col style="width:5%"><col style="width:7%"><col style="width:7%"><col style="width:5%"><col style="width:7%"><col style="width:9%"><col style="width:9%"></colgroup><thead><tr><th rowspan="2">ลำดับที่</th><th rowspan="2">รายการ</th><th colspan="4">ค่างานตามสัญญา</th><th rowspan="2">สูตรค่า K</th><th colspan="2">งานที่ส่งมอบครั้งนี้</th><th rowspan="2">ปรับลดค่างานที่เกินสัญญา (บาท)</th><th colspan="2">การคำนวณค่า K</th><th rowspan="2">เพิ่มขึ้น/ลดลง คิดเป็นเงิน (บาท)</th><th rowspan="2">หมายเหตุ</th></tr><tr><th>ปริมาณ</th><th>หน่วย</th><th>ราคาต่อหน่วย (บาท)</th><th>จำนวนเงินทั้งสิ้น (บาท)</th><th>ปริมาณ</th><th>จำนวนเงิน (บาท)</th><th>ค่า K</th><th>หักเกณฑ์แล้วคงเหลือ</th></tr></thead><tbody>${dataRows}${blankRows}</tbody><tfoot><tr><td colspan="5" style="text-align:right;font-weight:bold">รวมทั้งสิ้น</td><td class="up-number">${formatNum(totals.contract)}</td><td></td><td></td><td class="up-number">${formatNum(totals.submitted)}</td><td class="up-number">${formatNum(totals.excess)}</td><td colspan="2"></td><td class="up-number" style="font-weight:bold">${formatNum(totals.compensation)}</td><td></td></tr></tfoot></table></div>
+                ${signHtml}</div>`;
+            closeUnitPriceModal();
+            document.getElementById('app').classList.add('hidden');
+            printArea.classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+
         function updateItem(id, field, val) { 
             const isFirstItem = items.length > 0 && items[0].id === id;
-            items = items.map(i => i.id == id ? {...i, [field]: val} : i); 
+            items = items.map(i => {
+                if (i.id != id) return i;
+                if (field === 'formula' && val === FORMULA_NO_K) {
+                    return { ...i, formula: val, kValue: '', indices: { base: {}, curr: {} } };
+                }
+                return { ...i, [field]: val };
+            });
             
             if (isFirstItem && field === 'baseDate') {
                 items = items.map(i => i.id === id ? i : {...i, baseDate: val});
@@ -906,11 +1313,12 @@
         function addItem() { 
             const lastItem = items.length > 0 ? items[items.length - 1] : null;
             const newBaseDate = lastItem ? lastItem.baseDate : '';
+            const lastPeriod = [...items].reverse().find(i => String(i.period ?? '').trim())?.period;
             
             items.push({ 
-                id: Date.now(), period: '', name: '', formula: 'K1', 
+                id: Date.now(), period: String(lastPeriod || '1').trim(), name: '', formula: 'K1', 
                 baseDate: newBaseDate, deliveryDate: '', po: '', kValue: '', 
-                rule: currentGlobalRule, indices: { base: {}, curr: {} } 
+                rule: '4', indices: { base: {}, curr: {} } 
             }); 
             render(); 
             showToast('เพิ่มแถวรายการใหม่แล้ว', 'success');
@@ -983,6 +1391,7 @@
         }
 
         function saveProjectInfoLocally() {
+            const previousBaseDateLabel = getBaseDateLabel();
             projectInfo = {
                 name: document.getElementById('info_name').value,
                 type: document.getElementById('info_type').value,
@@ -995,12 +1404,23 @@
                 calculatorPos: document.getElementById('info_calculatorPos').value
             };
             closeProjectInfoModal();
+            syncRulesFromDates();
+            render();
+            if (previousBaseDateLabel !== getBaseDateLabel() && items.some(item => item.baseDate)) {
+                showToast('วันลงนามสัญญาเปลี่ยน ทำให้เดือนดัชนีฐานเปลี่ยนแล้ว กรุณาตรวจวันที่ฐานของทุกรายการก่อนคำนวณ', 'warning');
+                return;
+            }
             showToast('บันทึกข้อมูลโครงการเรียบร้อยแล้ว', 'success');
         }
 
         async function openCalcModal(id) {
             activeModalItemId = id;
             const item = items.find(i => i.id === id);
+            if (item.formula === FORMULA_NO_K) {
+                activeModalItemId = null;
+                showToast('รายการนี้ไม่อยู่ในสูตรค่า K จึงไม่ต้องคำนวณ', 'info');
+                return;
+            }
             const formulaDef = K_FORMULAS[item.formula];
             
             if (!formulaDef) {
@@ -1008,8 +1428,16 @@
                 return;
             }
 
+            if (!projectInfo.date) {
+                activeModalItemId = null;
+                showToast('กรุณากรอกวันลงนามสัญญาในข้อมูลโครงการก่อน เพื่อกำหนดเดือนดัชนีฐานให้ถูกต้อง', 'warning');
+                return;
+            }
+
             if(!item.baseDate || !item.deliveryDate) {
-                showToast("คำแนะนำ: กรุณาใส่วันที่เปิดซองฯ และวันส่งมอบงานก่อน เพื่อให้ระบบดึงดัชนีให้อัตโนมัติ", "info");
+                activeModalItemId = null;
+                showToast(`กรุณากรอก${getBaseDateLabel()}และวันส่งมอบงานก่อนคำนวณ`, "warning");
+                return;
             } else {
                 showToast("กำลังจับคู่ดัชนีจากฐานข้อมูล Cloud...", "info");
             }
@@ -1088,6 +1516,7 @@
         function calculateLiveK() {
             if (!activeModalItemId) return;
             const item = items.find(i => i.id === activeModalItemId);
+            if (item.formula === FORMULA_NO_K) return;
             const formulaDef = K_FORMULAS[item.formula];
             
             let totalK = 0;
@@ -1160,6 +1589,10 @@
         function saveModalCalc() {
             if (!activeModalItemId) return;
             const item = items.find(i => i.id === activeModalItemId);
+            if (item.formula === FORMULA_NO_K) {
+                closeCalcModal();
+                return;
+            }
             const formulaDef = K_FORMULAS[item.formula];
             
             let newBase = {};
@@ -1223,6 +1656,7 @@
                 projectName: projectName,
                 projectInfo: projectInfo,
                 items: items,
+                unitPriceForm: unitPriceForm,
                 globalRule: currentGlobalRule,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
@@ -1450,13 +1884,14 @@
                 const doc = await db.collection(COLLECTION_NAME).doc(docId).get();
                 if (doc.exists) {
                     const data = doc.data();
-                    items = (data.items || []).map(i => {
+                    items = normalizeItemPeriods((data.items || []).map(i => {
                         // Backward compatibility สำหรับไฟล์เดิม
                         if (i.rule === '2') i.rule = '2_after';
                         return i;
-                    });
+                    }));
                     
                     projectInfo = data.projectInfo || { name: '', type: '', contractNo: '', date: '', contractor: '', contractValue: '', requestDate: '' };
+                    unitPriceForm = data.unitPriceForm || { meta: {}, lines: [] };
                     
                     let loadedRule = data.globalRule || '2_after';
                     if (loadedRule === '2') loadedRule = '2_after';
@@ -1481,6 +1916,51 @@
         function closeIndexModal() {
             document.getElementById('indexModal').classList.add('hidden');
             document.getElementById('indexModal').classList.remove('flex');
+        }
+
+        const INDEX_KEYS = ['M','A','S','E','C','GIP','G','AC','I','PVC','F','W','PE'];
+
+        function setIndexInputs(indices = {}) {
+            INDEX_KEYS.forEach(key => {
+                const input = document.getElementById(`idx_${key}`);
+                if (input) input.value = indices[key] ?? '';
+            });
+        }
+
+        async function loadIndexMonth(monthVal) {
+            const status = document.getElementById('indexStatus');
+            setIndexInputs();
+            if (!monthVal) {
+                status.textContent = 'เลือกเดือนเพื่อดูหรือแก้ไขข้อมูล';
+                status.className = 'text-xs font-semibold text-slate-500';
+                return;
+            }
+
+            status.textContent = 'กำลังโหลดข้อมูล...';
+            status.className = 'text-xs font-semibold text-indigo-600';
+            try {
+                const doc = await db.collection('k_factor_master_indices').doc(monthVal).get();
+                if (doc.exists) {
+                    setIndexInputs(doc.data().indices || {});
+                    status.textContent = 'มีข้อมูลแล้ว — แก้ไขค่าและบันทึกทับได้';
+                    status.className = 'text-xs font-semibold text-emerald-600';
+                } else {
+                    status.textContent = 'ยังไม่มีข้อมูลเดือนนี้ — เพิ่มข้อมูลใหม่ได้';
+                    status.className = 'text-xs font-semibold text-amber-600';
+                }
+            } catch (error) {
+                console.error('Error loading index month:', error);
+                status.textContent = 'โหลดข้อมูลไม่สำเร็จ';
+                status.className = 'text-xs font-semibold text-rose-500';
+                showToast('โหลดข้อมูลดัชนีไม่สำเร็จ กรุณาลองใหม่', 'error');
+            }
+        }
+
+        function editIndexData(monthVal) {
+            closeAllIndicesModal();
+            openIndexModal();
+            document.getElementById('indexMonthSelector').value = monthVal;
+            loadIndexMonth(monthVal);
         }
 
         function processSmartPaste(text) {
@@ -1562,16 +2042,10 @@
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 showToast("บันทึกฐานข้อมูลดัชนีสำเร็จ!", "success");
-                
-                const keys = ['M','A','S','E','C','GIP','G','AC','I','PVC','F','W','PE'];
-                keys.forEach(k => {
-                    const el = document.getElementById(`idx_${k}`);
-                    if(el) el.value = '';
-                });
                 document.getElementById('smartPasteArea').value = '';
-                document.getElementById('indexMonthSelector').value = '';
-                document.getElementById('indexStatus').innerText = 'ไม่มีข้อมูลเดือนนี้';
-                document.getElementById('indexStatus').className = 'text-xs font-semibold text-rose-500';
+                document.getElementById('indexStatus').innerText = 'บันทึกแล้ว — แก้ไขต่อได้';
+                document.getElementById('indexStatus').className = 'text-xs font-semibold text-emerald-600';
+                if (!document.getElementById('allIndicesModal').classList.contains('hidden')) openAllIndicesModal();
 
             } catch (error) {
                 console.error("Error saving index: ", error);
@@ -1638,6 +2112,9 @@
                             <td class="p-3">${idx.W || '<span class="text-rose-300">-</span>'}</td>
                             <td class="p-3">${idx.PE || '<span class="text-rose-300">-</span>'}</td>
                             <td class="p-3">
+                                <button onclick="editIndexData('${data.id}')" class="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 p-2 rounded-md transition-colors shadow-sm border border-transparent hover:border-indigo-200 bg-white mr-1" title="แก้ไขข้อมูลเดือนนี้">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                </button>
                                 <button onclick="deleteIndexData('${data.id}', this)" class="text-rose-400 hover:text-rose-600 hover:bg-rose-50 p-2 rounded-md transition-colors shadow-sm border border-transparent hover:border-rose-200 bg-white" title="ลบข้อมูลเดือนนี้">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                 </button>
@@ -1752,11 +2229,12 @@
             showToast("กำลังเตรียมเอกสารสำหรับพิมพ์...", "info");
             
             try {
+                syncRulesFromDates();
                 const printArea = document.getElementById('printArea');
                 const projectName = document.getElementById('saveProjectNameInput') ? document.getElementById('saveProjectNameInput').value : (currentLoadedProjectId || '---');
                 
-                // คำนวณชื่อหัวคอลัมน์จากกฎปัจจุบัน
-                const baseDateLabel = currentGlobalRule === '2_after' ? 'วันที่อนุมัติราคากลาง' : 'วันที่เปิดซองประกวดราคา';
+                // คำนวณชื่อเดือนฐานจากวันลงนามสัญญา
+                const baseDateLabel = getBaseDateLabel();
                 
                 let html = `
                     <div class="fixed top-5 right-5 flex gap-3 no-print z-50">
@@ -1781,9 +2259,9 @@
 
                 let summaryRowsHtml = '';
                 let sumTotalPo = 0;
+                let sumExcludedPo = 0;
+                let sumConsideredPo = 0;
                 let sumCompensation = 0;
-                const rulePercent = currentGlobalRule === '4' ? '4%' : '2%';
-
                 const latestDateObj = getLatestDeliveryDate();
                 const lastDeliveryTxt = latestDateObj ? formatThaiDate(latestDateObj.toISOString().split('T')[0]) : '---';
                 
@@ -1796,91 +2274,100 @@
                 
                 const firstItem = items[0] || {};
                 const baseDateTxt = formatThaiDate(firstItem.baseDate);
+                const w233DeadlineTxt = formatThaiDate('2026-12-29');
                 const finalContractValue = parseFloat((projectInfo.contractValue||'').toString().replace(/,/g, '')) || 0;
+                const reportItems = normalizeItemPeriods(items);
 
-                items.forEach((item) => {
+                reportItems.forEach((item) => {
                     const poVal = parseFloat((item.po||'0').toString().replace(/,/g, '')) || 0;
-                    const kVal = parseFloat(item.kValue) || 0;
-                    const upperRule = item.rule === '4' ? 1.040 : 1.020;
-                    const lowerRule = item.rule === '4' ? 0.960 : 0.980;
+                    const isKEligible = item.formula !== FORMULA_NO_K;
+                    const kVal = isKEligible ? (parseFloat(item.kValue) || 0) : 0;
+                    const rulePercent = getItemRulePercent(item);
+                    const effectivePercent = rulePercent || 4;
+                    const upperRule = 1 + effectivePercent / 100;
+                    const lowerRule = 1 - effectivePercent / 100;
 
                     let multiplier = 0;
                     let compensation = 0;
 
-                    if (kVal > upperRule) {
-                        multiplier = truncate3(kVal - upperRule);
-                        compensation = truncate3(poVal * multiplier);
-                    } else if (kVal < lowerRule) {
-                        multiplier = truncate3(lowerRule - kVal);
-                        compensation = truncate3(poVal * multiplier) * -1;
+                    const calculationReady = Boolean(projectInfo.date && item.baseDate && item.deliveryDate);
+                    if (isKEligible && calculationReady && kVal > upperRule) {
+                        multiplier = parseFloat((kVal - upperRule).toFixed(3));
+                        compensation = poVal * multiplier;
+                    } else if (isKEligible && calculationReady && kVal < lowerRule) {
+                        multiplier = parseFloat((lowerRule - kVal).toFixed(3));
+                        compensation = poVal * multiplier * -1;
                     }
 
                     sumTotalPo += poVal;
+                    if (isKEligible) sumConsideredPo += poVal;
+                    else sumExcludedPo += poVal;
                     sumCompensation += compensation;
 
                     summaryRowsHtml += `
                         <tr>
-                            <td class="border border-black p-2">${item.period || 'NaN'}</td>
-                            <td class="border border-black p-2">${formatThaiDate(item.deliveryDate)}</td>
-                            <td class="border border-black p-2 text-right">${formatNum(poVal)}</td>
-                            <td class="border border-black p-2 text-right">0</td>
-                            <td class="border border-black p-2 text-right">${formatNum(poVal)}</td>
-                            <td class="border border-black p-2">${item.formula}</td>
-                            <td class="border border-black p-2">${kVal > 0 ? kVal.toFixed(3) : ''}</td>
-                            <td class="border border-black p-2">${multiplier > 0 ? multiplier.toFixed(3) : '0.000'}</td>
-                            <td class="border border-black p-2 text-right">${compensation !== 0 ? formatNum(compensation) : '0'}</td>
+                            <td class="border border-black px-1 py-1 text-center">${item.period || '1'}</td>
+                            <td class="border border-black px-1 py-1 text-left text-[8pt] break-words" style="overflow-wrap:anywhere">${escapeHtml(item.name || 'ไม่ระบุรายการ')}</td>
+                            <td class="border border-black px-1 py-1">${formatThaiDate(item.deliveryDate)}</td>
+                            <td class="border border-black px-1 py-1 text-right">${formatNum(poVal)}</td>
+                            <td class="border border-black px-1 py-1 text-right">${isKEligible ? '0' : formatNum(poVal)}</td>
+                            <td class="border border-black px-1 py-1 text-right">${isKEligible ? formatNum(poVal) : '0'}</td>
+                            <td class="border border-black px-1 py-1" style="overflow-wrap:anywhere">${isKEligible ? escapeHtml(item.formula) : 'ไม่อยู่ในสูตรค่า K'}</td>
+                            <td class="border border-black px-1 py-1">${isKEligible && kVal > 0 ? kVal.toFixed(3) : ''}</td>
+                            <td class="border border-black px-1 py-1">${isKEligible ? (calculationReady ? `±${effectivePercent}% / ${multiplier > 0 ? multiplier.toFixed(3) : '0.000'}` : 'กรอกวันที่ให้ครบ') : ''}</td>
+                            <td class="border border-black px-1 py-1 text-right">${compensation !== 0 ? formatNum(compensation) : '0'}</td>
                         </tr>
                     `;
                 });
 
                 html += `
-                    <div class="bg-white text-black" style="page-break-after: always; padding: 10mm 5mm; min-height: 297mm; font-size: 13pt;">
+                    <div class="bg-white text-black" style="page-break-after: always; padding: 5mm; font-size: 11pt;">
                         <h2 class="text-center font-bold text-lg mb-6">แบบฟอร์มที่ 2 การคำนวณเงินชดเชยเพิ่มเติมค่างานก่อสร้างตามสัญญาแบบปรับราคาได้ (ค่า K)</h2>
                         
-                        <div class="grid grid-cols-3 gap-x-4 gap-y-1 mb-6 leading-relaxed">
-                            <div>
-                                <div class="flex"><span class="w-24 font-bold">กระทรวง</span><span>กระทรวงมหาดไทย</span></div>
-                                <div class="flex"><span class="w-24 font-bold">กรม</span><span>กรมส่งเสริมการปกครองท้องถิ่น</span></div>
-                                <div class="flex"><span class="w-24 font-bold">สัญญาเลขที่</span><span>${projectInfo.contractNo || "---"}</span></div>
-                                <div class="flex"><span class="w-24 font-bold">ผู้รับจ้าง</span><span>${projectInfo.contractor || "---"}</span></div>
+                        <div class="grid grid-cols-2 gap-x-6 gap-y-1 mb-4 leading-snug text-[10pt]">
+                            <div class="space-y-1">
+                                <div class="grid grid-cols-[26mm_minmax(0,1fr)] gap-1"><span class="font-bold">กระทรวง</span><span>กระทรวงมหาดไทย</span></div>
+                                <div class="grid grid-cols-[26mm_minmax(0,1fr)] gap-1"><span class="font-bold">กรม</span><span>กรมส่งเสริมการปกครองท้องถิ่น</span></div>
+                                <div class="grid grid-cols-[26mm_minmax(0,1fr)] gap-1"><span class="font-bold">สัญญาเลขที่</span><span style="overflow-wrap:anywhere">${escapeHtml(projectInfo.contractNo || "---")}</span></div>
+                                <div class="grid grid-cols-[26mm_minmax(0,1fr)] gap-1"><span class="font-bold">ผู้รับจ้าง</span><span style="overflow-wrap:anywhere">${escapeHtml(projectInfo.contractor || "---")}</span></div>
+                                <div class="grid grid-cols-[26mm_minmax(0,1fr)] gap-1"><span class="font-bold">ชื่อโครงการ</span><span style="overflow-wrap:anywhere">${escapeHtml(projectInfo.name || firstItem.name || "---")}</span></div>
+                                <div class="grid grid-cols-[26mm_minmax(0,1fr)] gap-1"><span class="font-bold">${escapeHtml(baseDateLabel)}</span><span>${escapeHtml(baseDateTxt)}</span></div>
                             </div>
-                            <div>
-                                <div class="flex"><span class="w-36 font-bold shrink-0">ชื่อโครงการ</span><span class="flex-1">${projectInfo.name || firstItem.name || "---"}</span></div>
-                                <div class="flex"><span class="w-36 font-bold shrink-0">${baseDateLabel}</span><span class="flex-1">${baseDateTxt}</span></div>
-                                <div class="flex"><span class="w-36 font-bold shrink-0">ค่างานทั้งสัญญา</span><span class="flex-1">${formatNum(finalContractValue > 0 ? finalContractValue : sumTotalPo)}</span></div>
-                                <div class="flex"><span class="w-36 font-bold shrink-0">สัญญาเริ่ม</span><span class="flex-1">${formatThaiDate(projectInfo.date) || "---"}</span></div>
-                            </div>
-                            <div>
-                                <div class="flex"><span class="w-40 font-bold shrink-0">วันที่ส่งงานงวดสุด</span><span class="flex-1">${lastDeliveryTxt}</span></div>
-                                <div class="flex"><span class="w-40 font-bold shrink-0">วันที่ครบ 90 วันหลัง</span><span class="flex-1">${date90DaysTxt}</span></div>
-                                <div class="flex"><span class="w-40 font-bold shrink-0">วันที่ผู้รับจ้างขอเงิน</span><span class="flex-1">${reqDateTxt}</span></div>
-                                <div class="flex"><span class="w-40 font-bold shrink-0">สัญญาสิ้นสุด</span><span class="flex-1">---</span></div>
+                            <div class="space-y-1">
+                                <div class="grid grid-cols-[34mm_minmax(0,1fr)] gap-1"><span class="font-bold">ค่างานทั้งสัญญา</span><span>${formatNum(finalContractValue > 0 ? finalContractValue : sumTotalPo)}</span></div>
+                                <div class="grid grid-cols-[34mm_minmax(0,1fr)] gap-1"><span class="font-bold">วันลงนามสัญญา</span><span>${formatThaiDate(projectInfo.date) || "---"}</span></div>
+                                <div class="grid grid-cols-[34mm_minmax(0,1fr)] gap-1"><span class="font-bold">วันที่ส่งงานงวดสุด</span><span>${escapeHtml(lastDeliveryTxt)}</span></div>
+                                <div class="grid grid-cols-[34mm_minmax(0,1fr)] gap-1"><span class="font-bold">วันที่ครบ 90 วันหลัง</span><span>${escapeHtml(date90DaysTxt)}</span></div>
+                                <div class="grid grid-cols-[34mm_minmax(0,1fr)] gap-1"><span class="font-bold">กำหนดใช้ ว190/ว233</span><span>${escapeHtml(w233DeadlineTxt)}</span></div>
+                                <div class="grid grid-cols-[34mm_minmax(0,1fr)] gap-1"><span class="font-bold">วันที่ผู้รับจ้างขอเงิน</span><span>${escapeHtml(reqDateTxt)}</span></div>
+                                <div class="grid grid-cols-[34mm_minmax(0,1fr)] gap-1"><span class="font-bold">สัญญาสิ้นสุด</span><span>---</span></div>
                             </div>
                         </div>
 
-                        <table class="w-full border-collapse border border-black text-center mb-4 text-sm">
+                        <table class="w-full border-collapse border border-black text-center mb-4 text-[8pt] table-fixed" style="line-height:1.25">
                             <thead>
                                 <tr class="font-bold bg-slate-50">
-                                    <th class="border border-black p-2">งวด</th>
-                                    <th class="border border-black p-2">วันที่</th>
-                                    <th class="border border-black p-2">ค่างานทั้งหมด</th>
-                                    <th class="border border-black p-2">ไม่อยู่ในข่าย</th>
-                                    <th class="border border-black p-2">ได้รับพิจารณา</th>
-                                    <th class="border border-black p-2">สูตร K</th>
-                                    <th class="border border-black p-2">ค่า K</th>
-                                    <th class="border border-black p-2">หัก ${rulePercent} ชดเชย</th>
-                                    <th class="border border-black p-2">เงินชดเชยที่คำนวณได้</th>
+                                    <th class="border border-black px-1 py-1 w-[5%]">งวด</th>
+                                    <th class="border border-black px-1 py-1 w-[22%]">รายการก่อสร้าง</th>
+                                    <th class="border border-black px-1 py-1 w-[9%]">วันที่</th>
+                                    <th class="border border-black px-1 py-1 w-[11%]">ค่างานทั้งหมด</th>
+                                    <th class="border border-black px-1 py-1 w-[8%]">ไม่อยู่ในข่าย</th>
+                                    <th class="border border-black px-1 py-1 w-[11%]">ได้รับพิจารณา</th>
+                                    <th class="border border-black px-1 py-1 w-[8%]">สูตร K</th>
+                                    <th class="border border-black px-1 py-1 w-[6%]">ค่า K</th>
+                                    <th class="border border-black px-1 py-1 w-[8%]">เกณฑ์ / ส่วนต่าง</th>
+                                    <th class="border border-black px-1 py-1 w-[12%]">เงินชดเชยที่คำนวณได้</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${summaryRowsHtml}
                                 <tr class="font-bold bg-slate-50">
-                                    <td class="border border-black p-2 text-center" colspan="2">ยอดรวมทั้งสิ้น</td>
-                                    <td class="border border-black p-2 text-right">${formatNum(sumTotalPo)}</td>
-                                    <td class="border border-black p-2 text-right">0</td>
-                                    <td class="border border-black p-2 text-right">${formatNum(sumTotalPo)}</td>
-                                    <td class="border border-black p-2" colspan="3"></td>
-                                    <td class="border border-black p-2 text-right">${formatNum(sumCompensation)}</td>
+                                    <td class="border border-black px-1 py-1 text-center" colspan="3">ยอดรวมทั้งสิ้น</td>
+                                    <td class="border border-black px-1 py-1 text-right">${formatNum(sumTotalPo)}</td>
+                                    <td class="border border-black px-1 py-1 text-right">${formatNum(sumExcludedPo)}</td>
+                                    <td class="border border-black px-1 py-1 text-right">${formatNum(sumConsideredPo)}</td>
+                                    <td class="border border-black px-1 py-1" colspan="3"></td>
+                                    <td class="border border-black px-1 py-1 text-right">${formatNum(sumCompensation)}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1904,15 +2391,16 @@
                     </div>
                 `;
 
-                items.forEach((item, index) => {
+                reportItems.forEach((item, index) => {
+                    if (item.formula === FORMULA_NO_K || !item.deliveryDate || !projectInfo.date || !item.baseDate) return;
                     const safePo = item.po !== undefined && item.po !== null ? item.po.toString() : '0';
                     const poVal = parseFloat(safePo.replace(/,/g, '')) || 0;
                     const formulaDef = K_FORMULAS[item.formula];
                     const base = item.indices?.base || {};
                     const curr = item.indices?.curr || {};
-                    const itemRulePercent = item.rule === '4' ? '4.00%' : '2.00%';
-                    const upperRule = item.rule === '4' ? 1.040 : 1.020;
-                    const lowerRule = item.rule === '4' ? 0.960 : 0.980;
+                    const itemRulePercent = `${getItemRulePercent(item)}.00%`;
+                    const upperRule = 1 + getItemRulePercent(item) / 100;
+                    const lowerRule = 1 - getItemRulePercent(item) / 100;
 
                     let formulaEqStr = '';
                     if (formulaDef) {
@@ -1920,11 +2408,12 @@
                     }
 
                     html += `
-                        <div class="bg-white text-black text-sm pb-10" style="page-break-after: always; min-height: 297mm; padding: 20mm;">
+                        <div class="bg-white text-black text-sm pb-10" style="page-break-after: always; padding: 10mm;">
                             <div class="text-center font-bold text-lg mb-8">แสดงรายการคำนวณค่า K</div>
                             
                             <table class="w-full mb-6 leading-relaxed">
-                                <tr><td class="w-40 align-top">งานก่อสร้าง</td><td class="font-medium underline decoration-dotted underline-offset-4">${projectInfo.type || '---'}</td></tr>
+                                <tr><td class="w-40 align-top">ประเภทงานก่อสร้าง</td><td class="font-medium underline decoration-dotted underline-offset-4">${escapeHtml(projectInfo.type || '---')}</td></tr>
+                                <tr><td class="w-40 align-top">รายการก่อสร้าง</td><td class="font-medium underline decoration-dotted underline-offset-4">${escapeHtml(item.name || 'ไม่ระบุรายการ')}</td></tr>
                                 <tr><td class="w-40 align-top">สัญญาเลขที่</td><td class="font-medium">${projectInfo.contractNo || '---'}</td></tr>
                                 <tr><td class="w-40 align-top">งวดที่</td><td class="font-medium underline decoration-dotted underline-offset-4">${item.period || 'สุดท้าย'}</td></tr>
                                 <tr><td class="w-40 align-top">สูตร</td><td class="font-medium">${formulaEqStr}</td></tr>
@@ -2052,6 +2541,7 @@
 
         function closePrintView() {
             document.getElementById('printArea').classList.add('hidden');
+            document.getElementById('printArea').classList.remove('unit-price-print');
             document.getElementById('app').classList.remove('hidden');
             window.scrollTo(0, 0);
         }
@@ -2061,11 +2551,11 @@
                 showToast("ไม่พบไลบรารีสำหรับสร้าง Excel", "error");
                 return;
             }
+            syncRulesFromDates();
             showToast("กำลังสร้างไฟล์ Excel แบบฟอร์มที่ 2...", "info");
 
             const projectName = document.getElementById('saveProjectNameInput') ? document.getElementById('saveProjectNameInput').value : (currentLoadedProjectId || '---');
-            const rulePercent = currentGlobalRule === '4' ? '4%' : '2%';
-            const baseDateLabel = currentGlobalRule === '2_after' ? 'วันที่อนุมัติราคากลาง' : 'วันที่เปิดซองประกวดราคา';
+            const baseDateLabel = getBaseDateLabel();
             
             const formatThaiDateStr = (dateString) => {
                 if (!dateString) return '';
@@ -2078,6 +2568,7 @@
             const firstItem = items[0] || {};
             const prjName = firstItem.name || '---';
             const baseDateTxt = formatThaiDateStr(firstItem.baseDate);
+            const w233DeadlineTxt = formatThaiDateStr('2026-12-29');
             
             const latestDateObj = getLatestDeliveryDate();
             const lastDeliveryTxt = latestDateObj ? formatThaiDateStr(latestDateObj.toISOString().split('T')[0]) : '---';
@@ -2094,56 +2585,64 @@
             const finalContractValue = parseFloat((projectInfo.contractValue||'').toString().replace(/,/g, '')) || totalContractValue;
 
             const ws_data = [
-                ["แบบฟอร์มที่ 2 การคำนวณเงินชดเชยเพิ่มเติมค่างานก่อสร้างตามสัญญาแบบปรับราคาได้ (ค่า K)", "", "", "", "", "", "", "", ""],
-                ["กระทรวง", "กระทรวงมหาดไทย", "", "ชื่อโครงการ", projectInfo.name || prjName, "", "วันที่ส่งงานงวดสุด", lastDeliveryTxt, ""],
-                ["กรม", "กรมส่งเสริมการปกครองท้องถิ่น", "", baseDateLabel, baseDateTxt, "", "วันที่ครบ 90 วันหลัง", date90DaysTxt, ""],
-                ["สัญญาเลขที่", projectInfo.contractNo || "---", "", "ค่างานทั้งสัญญา", finalContractValue, "", "วันที่ผู้รับจ้างขอเงิน", formatThaiDateStr(projectInfo.requestDate) || date90DaysTxt, ""],
-                ["ผู้รับจ้าง", projectInfo.contractor || "---", "", "สัญญาเริ่ม", formatThaiDateStr(projectInfo.date) || "", "", "สัญญาสิ้นสุด", "", ""],
-                ["", "", "", "", "", "", "", "", ""],
-                ["งวด", "วันที่", "ค่างานทั้งหมด", "ไม่อยู่ในข่าย", "ได้รับพิจารณา", "สูตร K", "ค่า K", `หัก ${rulePercent} ชดเชย`, "เงินชดเชยที่คำนวณได้"]
+                ["แบบฟอร์มที่ 2 การคำนวณเงินชดเชยเพิ่มเติมค่างานก่อสร้างตามสัญญาแบบปรับราคาได้ (ค่า K)", "", "", "", "", "", "", "", "", ""],
+                ["กระทรวง", "กระทรวงมหาดไทย", "", "ชื่อโครงการ", projectInfo.name || prjName, "", "วันที่ส่งงานงวดสุด", lastDeliveryTxt, "", ""],
+                ["กรม", "กรมส่งเสริมการปกครองท้องถิ่น", "", baseDateLabel, baseDateTxt, "", "วันที่ครบ 90 วันหลัง", date90DaysTxt, "", ""],
+                ["สัญญาเลขที่", projectInfo.contractNo || "---", "", "ค่างานทั้งสัญญา", finalContractValue, "", "วันที่ผู้รับจ้างขอเงิน", formatThaiDateStr(projectInfo.requestDate) || date90DaysTxt, "", ""],
+                ["ผู้รับจ้าง", projectInfo.contractor || "---", "", "วันลงนามสัญญา", formatThaiDateStr(projectInfo.date) || "", "", "สัญญาสิ้นสุด", "", "", ""],
+                ["กำหนดยื่นใช้มาตรการ ว190/ว233", w233DeadlineTxt, "", "กำหนด 90 วันตามวันส่งมอบงวดสุดท้าย", date90DaysTxt, "", "ตรวจและยื่นตามกำหนดที่ถึงก่อน", "", "", ""],
+                ["", "", "", "", "", "", "", "", "", ""],
+                ["งวด", "รายการก่อสร้าง", "วันที่", "ค่างานทั้งหมด", "ไม่อยู่ในข่าย", "ได้รับพิจารณา", "สูตร K", "ค่า K", "เกณฑ์ / ส่วนต่าง", "เงินชดเชยที่คำนวณได้"]
             ];
 
             let sumTotalPo = 0;
+            let sumExcludedPo = 0;
             let sumConsideredPo = 0;
             let sumCompensation = 0;
 
             items.forEach(item => {
                 const poVal = parseFloat((item.po||'0').toString().replace(/,/g, '')) || 0;
-                const kVal = parseFloat(item.kValue) || 0;
-                const upperRule = item.rule === '4' ? 1.040 : 1.020;
-                const lowerRule = item.rule === '4' ? 0.960 : 0.980;
+                const isKEligible = item.formula !== FORMULA_NO_K;
+                const kVal = isKEligible ? (parseFloat(item.kValue) || 0) : 0;
+                const itemRulePercent = getItemRulePercent(item);
+                const effectivePercent = itemRulePercent || 4;
+                const upperRule = 1 + effectivePercent / 100;
+                const lowerRule = 1 - effectivePercent / 100;
 
                 let multiplier = 0;
                 let compensation = 0;
 
-                if (kVal > upperRule) {
+                const calculationReady = Boolean(projectInfo.date && item.baseDate && item.deliveryDate);
+                if (isKEligible && calculationReady && kVal > upperRule) {
                     multiplier = truncate3(kVal - upperRule);
                     compensation = truncate3(poVal * multiplier);
-                } else if (kVal < lowerRule) {
+                } else if (isKEligible && calculationReady && kVal < lowerRule) {
                     multiplier = truncate3(lowerRule - kVal);
                     compensation = truncate3(poVal * multiplier) * -1; 
                 }
 
                 sumTotalPo += poVal;
-                sumConsideredPo += poVal;
+                if (isKEligible) sumConsideredPo += poVal;
+                else sumExcludedPo += poVal;
                 sumCompensation += compensation;
 
                 ws_data.push([
-                    item.period || 'NaN',
+                    item.period || '1',
+                    item.name || 'ไม่ระบุรายการ',
                     formatThaiDateStr(item.deliveryDate),
                     poVal,
-                    0, 
-                    poVal,
-                    item.formula,
-                    kVal > 0 ? kVal.toFixed(3) : '',
-                    multiplier > 0 ? multiplier.toFixed(3) : '',
+                    isKEligible ? 0 : poVal,
+                    isKEligible ? poVal : 0,
+                    isKEligible ? item.formula : 'ไม่อยู่ในสูตรค่า K',
+                    isKEligible && kVal > 0 ? kVal.toFixed(3) : '',
+                    isKEligible ? (calculationReady ? `±${effectivePercent}% / ${multiplier > 0 ? multiplier.toFixed(3) : '0.000'}` : 'กรอกวันที่ให้ครบ') : '',
                     compensation !== 0 ? compensation : ''
                 ]);
             });
 
-            ws_data.push(["", "ยอดรวมทั้งสิ้น", sumTotalPo, 0, sumConsideredPo, "", "", "", sumCompensation]);
-            ws_data.push(["", "", "", "", "", "", "", "", ""]);
-            ws_data.push(["* หมายถึงค่า K ของเดือนสิ้นสุดสัญญา ซึ่งที่มีค่าน้อยกว่าค่า K ของเดือนส่งงานงวดนั้นๆ โดยจะมีการเปรียบเทียบก็ต่อเมื่อวันส่งงานของงวดนั้นๆ ช้ากว่าวันสิ้นสุดสัญญา", "", "", "", "", "", "", "", ""]);
+            ws_data.push(["", "ยอดรวมทั้งสิ้น", "", sumTotalPo, sumExcludedPo, sumConsideredPo, "", "", "", sumCompensation]);
+            ws_data.push(["", "", "", "", "", "", "", "", "", ""]);
+            ws_data.push(["* หมายถึงค่า K ของเดือนสิ้นสุดสัญญา ซึ่งที่มีค่าน้อยกว่าค่า K ของเดือนส่งงานงวดนั้นๆ โดยจะมีการเปรียบเทียบก็ต่อเมื่อวันส่งงานของงวดนั้นๆ ช้ากว่าวันสิ้นสุดสัญญา", "", "", "", "", "", "", "", "", ""]);
 
             const ws = XLSX.utils.aoa_to_sheet(ws_data);
 
@@ -2178,7 +2677,7 @@
                             right: { style: "thin", color: { auto: 1 } }
                         };
                         
-                        if (R === 6 || C === 0 || C === 1 || C === 5 || C === 6 || C === 7) {
+                        if (R === 6 || C === 0 || C === 2 || C === 6 || C === 7 || C === 8) {
                             style.alignment.horizontal = "center";
                         }
                         
@@ -2196,7 +2695,7 @@
             }
 
             ws['!merges'] = [
-                { s: { r: 0, c: 0 }, e: { r: 0, c: 8 } },
+                { s: { r: 0, c: 0 }, e: { r: 0, c: 9 } },
                 { s: { r: 1, c: 1 }, e: { r: 1, c: 2 } }, 
                 { s: { r: 2, c: 1 }, e: { r: 2, c: 2 } }, 
                 { s: { r: 3, c: 1 }, e: { r: 3, c: 2 } }, 
@@ -2209,11 +2708,11 @@
                 { s: { r: 2, c: 7 }, e: { r: 2, c: 8 } }, 
                 { s: { r: 3, c: 7 }, e: { r: 3, c: 8 } }, 
                 { s: { r: 4, c: 7 }, e: { r: 4, c: 8 } }, 
-                { s: { r: ws_data.length - 1, c: 0 }, e: { r: ws_data.length - 1, c: 8 } }
+                { s: { r: ws_data.length - 1, c: 0 }, e: { r: ws_data.length - 1, c: 9 } }
             ];
 
             ws['!cols'] = [
-                {wch: 8}, {wch: 16}, {wch: 16}, {wch: 16}, {wch: 16}, {wch: 10}, {wch: 10}, {wch: 12}, {wch: 18}
+                {wch: 8}, {wch: 34}, {wch: 16}, {wch: 16}, {wch: 16}, {wch: 16}, {wch: 22}, {wch: 10}, {wch: 12}, {wch: 20}
             ];
 
             const wb = XLSX.utils.book_new();
